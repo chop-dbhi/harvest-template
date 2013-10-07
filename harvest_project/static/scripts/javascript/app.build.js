@@ -15,8 +15,21 @@
 
     optimizeCss: 'none',
 
+    loglevel: 1,
+
+    throwWhen: {
+        combined: true
+    },
+
     paths: {
-        'cilantro': 'empty:'
+        'project': '.',
+        'cilantro': 'empty:',
+        'jquery': 'empty:',
+        'underscore': 'empty:',
+        'backbone': 'empty:',
+        'mariontette': 'empty:',
+        'highcharts': 'empty:',
+        'bootstrap': 'empty:'
     },
 
     name: 'main'

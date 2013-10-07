@@ -1,1 +1,39 @@
-#tutorial .step-number{-webkit-border-radius:50px;-moz-border-radius:50px;-ms-border-radius:50px;-o-border-radius:50px;border-radius:50px;display:inline-block;font-size:32px;font-weight:bold;width:50px;height:50px;background-color:#D3E3F2;text-align:center;margin-top:5px}#tutorial .step-number>span{position:relative;top:14px}#tutorial>.row-fluid{margin-bottom:40px}#tutorial-modal{width:800px;height:640px;margin-left:-400px;margin-top:-325px}#tutorial-modal .modal-body{-webkit-border-radius:6px 6px 0 0;-moz-border-radius:6px 6px 0 0;-ms-border-radius:6px 6px 0 0;-o-border-radius:6px 6px 0 0;border-radius:6px 6px 0 0;max-height:550px}code{color:#000}#footer{margin:20px auto;padding-top:20px;border-top:1px solid #ddd;width:50%;text-align:center;color:#999}body{padding-top:60px}.gallery-ui{text-shadow:0 1px 1px #fff;box-shadow:inset 1px 2px 2px #ddd;border-radius:3px;border:1px solid #ccc;background-color:rgba(0,0,0,0.05)}#gallery-toolbar{margin-bottom:10px;padding:5px 10px}.preview-ui{border-radius:3px;border:1px dashed #ccc;padding:10px}#preview-area>.preview-label{color:#999;font-weight:200;text-shadow:0 1px 1px #fff}#gallery-nav [data-toggle]{cursor:pointer}#gallery-nav section{border-bottom:1px solid #ccc;padding:10px 10px 0 10px}#gallery-nav section:last-child{margin-bottom:0;border-bottom:none}#gallery-nav ul{margin-bottom:0}#gallery-nav :first-child{margin-top:0}#gallery-nav .well{padding:10px;box-shadow:none;border:1px solid #ccc;background-color:#f9f9f9;margin-bottom:10px}#gallery-nav form{margin-bottom:0}#gallery-nav h4{color:#666}#components ul{padding-left:0;padding-right:0}#components li a{margin-left:-10px;margin-right:-10px;padding-left:10px;padding-right:10px}#swatches li{vertical-align:top;color:#666}#stream ul{max-height:300px;overflow:scroll}#stream li{border-bottom:1px solid #ccc;padding:5px 0}#stream li:first-child{padding-top:0}#stream li:last-child{border-bottom:none;padding-bottom:0}#stream li pre{text-shadow:0 1px 1px #fff;display:block;padding:5px;line-height:15px;font-size:10px;display:none}#stream li a{font-style:italic}.swatch{border:1px solid #999;display:inline-block;width:20px;height:20px;margin-right:10px}@media (max-width: 979px){body{padding-top:0}}
+html, body {
+    height: 100%;
+}
+
+code {
+    color: #000
+}
+
+#wrap {
+    position: relative;
+    min-height: 100%;
+}
+
+#wrap > .container-fluid {
+    padding-top: 60px;
+    padding-bottom: 80px;
+}
+
+#footer {
+    padding: 9px 40px 10px 40px;
+    border-top: 1px solid #ddd;
+    text-align: center;
+    color: #999;
+    position: absolute;
+    background-color: #f6f6f6;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+@media (max-width: 979px) {
+    body {
+        padding-top: 0
+    }
+
+    #footer {
+        position: static;
+    }
+}

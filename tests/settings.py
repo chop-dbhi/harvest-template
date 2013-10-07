@@ -9,6 +9,7 @@ DATABASES = {
 
 INSTALLED_APPS = (
     'harvest_project',
+    'tests',
 )
 
 TEST_RUNNER = 'tests.runner.ProfilingTestRunner'

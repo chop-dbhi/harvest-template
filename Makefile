@@ -22,6 +22,10 @@ collect:
 	@${MANAGE_SCRIPT} collectstatic --link --noinput > /dev/null
 
 optimize: clean
+	@if [ ! -f `which node` ]; then \
+		echo 'NodeJS must be installed to optimize JavaScript files.'; \
+		exit; \
+	fi;
 	@echo 'Optimizing JavaScript...'
 	@mkdir -p ${JAVASCRIPT_MIN_DIR}
 	@${REQUIRE_OPTIMIZE} > /dev/null
