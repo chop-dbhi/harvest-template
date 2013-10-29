@@ -19,7 +19,7 @@ build: optimize
 
 collect:
 	@echo 'Symlinking static files...'
-	@${MANAGE_SCRIPT} collectstatic --link --noinput > /dev/null
+	@python ${MANAGE_SCRIPT} collectstatic --link --noinput > /dev/null
 
 optimize: clean
 	@if [ ! -f `which node` ]; then \
