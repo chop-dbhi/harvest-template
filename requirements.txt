@@ -12,10 +12,9 @@ Django>=1.5,<1.6
 # Fabric
 
 # Harvest components
-serrano==2.1.3
+serrano==2.2.0
 
 # Harvest extensions
-# django-haystack==1.2.7
-# Whoosh==2.4.0
-# django-guardian
-# openpyxl
+django-haystack==1.2.7
+Whoosh==2.4.0
+openpyxl
