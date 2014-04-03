@@ -77,17 +77,17 @@ def get_hosts_settings():
         base.update(hosts[host])
         hosts[host] = base
 
-    if not env.hosts:
-        abort(red('Error: At least one host must be specified'))
-
     # Validate all hosts have an entry in the .hosts file
     for target in env.hosts:
         if target not in hosts:
             abort(red('Error: No settings have been defined for the "{0}" host'.format(target)))
+        
         settings = hosts[target]
+        
         for key in required_settings:
             if not settings[key]:
                 abort(red('Error: The setting "{0}" is not defined for "{1}" host'.format(key, target)))
+    
     return hosts
 
 
@@ -98,6 +98,8 @@ def host_context(func):
     "Sets the context of the setting to the current host"
     @wraps(func)
     def decorator(*args, **kwargs):
+        if not env.host:
+            abort(red('Error: A host must be specified to run this command.'))
         with settings(**hosts[env.host]):
             return func(*args, **kwargs)
     return decorator
