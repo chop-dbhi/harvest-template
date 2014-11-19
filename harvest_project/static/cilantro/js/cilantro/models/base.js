@@ -1,2 +1,119 @@
-var __hasProp={}.hasOwnProperty,__extends=function(t,e){function i(){this.constructor=t}for(var n in e)__hasProp.call(e,n)&&(t[n]=e[n]);return i.prototype=e.prototype,t.prototype=new i,t.__super__=e.prototype,t};define(["backbone"],function(t){var e,i,n,s,o,r,a,h;return i=function(t){function e(t,i){this.links={},e.__super__.constructor.call(this,t,i),this.on("change:_links",function(t,e){return this._parseLinks(e)})}return __extends(e,t),e.prototype.url=function(){return this.isNew()?e.__super__.url.apply(this,arguments):this.links.self},e.prototype._parseLinks=function(t){var e,i,n;i={};for(n in t)e=t[n],i[n]=e.href;return this.links=i},e.prototype.parse=function(t){return null!=(null!=t?t._links:void 0)&&this._parseLinks(t._links),t},e}(t.Model),e=function(t){function e(t,i){this.links={},e.__super__.constructor.call(this,t,i)}return __extends(e,t),e.prototype.model=i,e.prototype.url=function(){return this.links.self},e.prototype._parseLinks=function(t){var e,i,n;i={};for(n in t)e=t[n],i[n]=e.href;return this.links=i},e.prototype.parse=function(t){return null!=(null!=t?t._links:void 0)&&this._parseLinks(t._links),t},e}(t.Collection),o=function(t){function e(){return r=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e.prototype.sync=function(){},e}(i),s=function(t){function e(){return a=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e.prototype.sync=function(){},e}(e),n=function(e){function i(){return h=i.__super__.constructor.apply(this,arguments)}return __extends(i,e),i.prototype.initialize=function(){return this.add({session:!0}),this.session=this.get("session")},i.prototype._resetSession=function(){return this.session.clear({silent:!0}),this.session.set("session",!0,{silent:!0})},i.prototype.reset=function(t,e){var i,n,s,o;for(null==e&&(e={}),o=this.models,n=0,s=o.length;s>n;n++)i=o[n],i===this.session?this._resetSession():this._removeReference(i);return e.previousModels=this.models,this._reset(),this.add(this.session,_.extend({silent:!0},e)),(i=_.findWhere(t,{session:!0}))&&this.session.set(i,e),this.add(t,_.extend({silent:!0,merge:!0},e)),e.silent||this.trigger("reset",this,e),this},i.prototype.get=function(e){var n;return n=!1,e instanceof t.Model&&(n=e.get("session")),("session"===e||"object"==typeof e&&e.session)&&(n=!0),n?this.findWhere({session:!0}):i.__super__.get.call(this,e)},i.prototype.getSession=function(){return this.session},i}(e),{Model:i,Collection:e,SynclessModel:o,SynclessCollection:s,SessionCollection:n}});
-//@ sourceMappingURL=base.js.map
+/* global define */
+
+define([
+    'underscore',
+    'backbone'
+], function(_, Backbone) {
+
+    // Base model for Cilantro. Data for models commonly contain a
+    // `_links` attribute which is parsed to be made accessible for
+    // consumers.
+    var Model = Backbone.Model.extend({
+        constructor: function(attrs, options) {
+            options = _.defaults({parse: true}, options);
+            this.links = {};
+
+            Backbone.Model.prototype.constructor.call(this, attrs, options);
+            this.on('change:_links', this._parseLinks);
+        },
+
+        url: function() {
+            if (this.isNew()) {
+                return Backbone.Model.prototype.url.call(this);
+            }
+            return this.links.self;
+        },
+
+        _parseLinks: function(model, attrs) {
+            var links = {};
+
+            _.each(attrs, function(link, name) {
+                links[name] = link.href;
+            });
+
+            model.links = links;
+        },
+
+        parse: function(attrs) {
+            if (attrs && attrs._links) {
+                this._parseLinks(this, attrs._links);
+            }
+
+            return attrs;
+        }
+    });
+
+    var Collection = Backbone.Collection.extend({
+        model: Model
+    });
+
+    // Base collection class that is session-aware. A session is always
+    // created on initialization which enables immediately binding to the
+    // session object, as well transparency when switching between session
+    // objects. This is used for Context, View and Query collections.
+    var SessionCollection = Collection.extend({
+        initialize: function() {
+            this.session = this.add({session: true});
+        },
+
+        // Prevent deferencing the session
+        reset: function(models, options) {
+            options = options || {};
+            models = models || [];
+
+            // Search for session model, merge into existing and remove it
+            var model, match;
+
+            for (var i = 0; i < models.length; i++) {
+                model = models[i];
+
+                if (model instanceof Backbone.Model) {
+                    if (model.get('session') === true) match = model.toJSON();
+                } else if (model && model.session === true) {
+                    match = model;
+                }
+
+                if (match) {
+                    this.session.set(match, options);
+                    models.splice(i, 1);
+                    break;
+                }
+            }
+
+            models.push(this.session);
+            return Collection.prototype.reset.call(this, models, options);
+        },
+
+        // Extend `get` to lookup by session if passed. The session model
+        // may change over time which is independent of the model id.
+        // Furthermore, it guarantees views will have something to bind to
+        // prior to it being fetched from the server.
+        get: function(attrs) {
+            var session = false;
+
+            if (attrs instanceof Backbone.Model) {
+                session = attrs.get('session');
+            }
+
+            if (attrs === 'session' || (typeof attrs === 'object' && attrs.session)) {
+                session = true;
+            }
+
+            if (session) return this.findWhere({session: true});
+
+            return Collection.prototype.get.call(this, attrs);
+        },
+
+        getSession: function() {
+            return this.session;
+        }
+    });
+
+
+    return {
+        Model: Model,
+        Collection: Collection,
+        SessionCollection: SessionCollection
+    };
+
+});

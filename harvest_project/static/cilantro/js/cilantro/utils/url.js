@@ -1,2 +1,53 @@
-define(["jquery"],function(t){var e=function(t){var e=document.createElement("a");return e.href=t,e},i=function(i,n){if(!n)return i;for(var o=e(i),r={},s=o.search.substr(1).split("&"),a=0;a<s.length;a++){var l=s[a].split("=");l[0]&&(r[l[0]]=window.decodeURIComponent(l[1]))}return t.extend(r,n),o.search="?"+t.param(r),o.href};return{linkParser:e,alterUrlParams:i}});
-//@ sourceMappingURL=url.js.map
+/* global define */
+
+define(['jquery'], function($) {
+
+    /*
+     * Utility method for parsing links. See:
+     *      http://stackoverflow.com/a/6644749/407954
+     *      https://developer.mozilla.org/en-US/docs/Web/API/window.location
+     */
+    var linkParser = function(href) {
+        var a = document.createElement('a');
+        a.href = href;
+        return a;
+    };
+
+    /*
+     * Augments/changes a URL's query parameters. Takes a URL and object
+     * of URL params.
+     */
+    var alterUrlParams = function(href, data) {
+        if (!data) return href;
+
+        // Parse the href into a temporary anchor element
+        var a = linkParser(href);
+
+        // Parse existing params on URL
+        var params = {},
+            search = a.search.substr(1).split('&');
+
+        // De-parametize URL
+        for (var i = 0; i< search.length; i++) {
+            var param = search[i].split('=');
+
+            if (param[0]) {
+                // Reverse what jQuery parametize logic
+                params[param[0]] = decodeURIComponent(param[1].replace('+', ' '));
+            }
+        }
+
+        // Update params hash with passed params
+        $.extend(params, data);
+
+        // Reset parameters on the href
+        a.search = '?' + $.param(params);
+
+        return a.href;
+    };
+
+    return {
+        linkParser: linkParser,
+        alterUrlParams: alterUrlParams
+    };
+});

@@ -1,2 +1,48 @@
-var __hasProp={}.hasOwnProperty,__extends=function(t,e){function i(){this.constructor=t}for(var n in e)__hasProp.call(e,n)&&(t[n]=e[n]);return i.prototype=e.prototype,t.prototype=new i,t.__super__=e.prototype,t};define(["./base"],function(t){var e,i,n,s;return i=function(t){function e(){return n=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e.prototype.parse=function(t){return e.__super__.parse.apply(this,arguments),null!=t&&null==t.shared_users&&(t.shared_users=[]),t},e}(t.Model),e=function(t){function e(){return s=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e.prototype.model=i,e}(t.Collection),{QueryModel:i,QueryCollection:e}});
-//@ sourceMappingURL=query.js.map
+/* global define */
+
+define([
+    './base',
+    '../core',
+    './context',
+    './view'
+], function(base, c, context, view) {
+
+
+    var Query = base.Model.extend({
+        constructor: function(attrs, options) {
+            attrs = attrs || {};
+
+            // Use this.model.context.attributes.json to retrive query filters as
+            // of this change.
+            this.context = new context.Context({json: attrs.context_json}); // jshint ignore:line
+            this.view = new view.ViewModel({json: attrs.view_json}); // jshint ignore:line
+
+            base.Model.prototype.constructor.call(this, attrs, options);
+        },
+
+        parse: function(attrs, options) {
+            if (attrs) {
+                if (attrs && !attrs.shared_users) {  // jshint ignore:line
+                    attrs.shared_users = [];  // jshint ignore:line
+                }
+
+                this.context.set({json: attrs.context_json}); // jshint ignore:line
+                this.view.set({json: attrs.view_json}); // jshint ignore:line
+            }
+
+            return base.Model.prototype.parse.call(this, attrs, options);
+        }
+    });
+
+
+    var Queries = base.Collection.extend({
+        model: Query
+    });
+
+
+    return {
+        Query: Query,
+        Queries: Queries
+    };
+
+});

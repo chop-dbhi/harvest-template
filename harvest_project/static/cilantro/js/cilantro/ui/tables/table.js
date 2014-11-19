@@ -1,2 +1,63 @@
-var __hasProp={}.hasOwnProperty,__extends=function(t,e){function i(){this.constructor=t}for(var n in e)__hasProp.call(e,n)&&(t[n]=e[n]);return i.prototype=e.prototype,t.prototype=new i,t.__super__=e.prototype,t};define(["underscore","marionette","./body","./header","./footer"],function(t,e,i,n,o){var r,s;return r=function(e){function r(){return s=r.__super__.constructor.apply(this,arguments)}return __extends(r,e),r.prototype.tagName="table",r.prototype.className="table table-striped",r.prototype.itemView=i.Body,r.prototype.itemViewOptions=function(e){return t.defaults({collection:e.series},this.options)},r.prototype.collectionEvents={"change:currentpage":"showCurrentPage"},r.prototype.initialize=function(){var e=this;return this.header=new n.Header(t.defaults({collection:this.collection.indexes},this.options)),this.footer=new o.Footer(t.defaults({collection:this.collection.indexes},this.options)),this.header.render(),this.footer.render(),this.$el.append(this.header.el,this.footer.el),this.collection.on("reset",function(){return 0===e.collection.objectCount?e.$el.hide():e.$el.show()})},r.prototype.showCurrentPage=function(t,e){return this.children.each(function(t){return t.$el.toggle(t.model.id===e)})},r}(e.CollectionView),{Table:r}});
-//@ sourceMappingURL=table.js.map
+/* global define */
+
+define([
+    'underscore',
+    'marionette',
+    './body',
+    './header',
+    './footer'
+], function(_, Marionette, body, header, footer) {
+
+    // Renders a table with the thead and tfoot elements and one or more
+    // tbody elements each representing a frame of data in the collection.
+    var Table = Marionette.CollectionView.extend({
+        tagName: 'table',
+
+        className: 'table table-striped',
+
+        itemView: body.Body,
+
+        itemViewOptions: function(item) {
+            return _.defaults({collection: item.series}, this.options);
+        },
+
+        collectionEvents: {
+            'change:currentpage': 'showCurrentPage'
+        },
+
+        initialize: function() {
+            this.header = new header.Header(_.defaults({
+                collection: this.collection.indexes
+            }, this.options));
+
+            this.footer = new footer.Footer(_.defaults({
+                collection: this.collection.indexes
+            }, this.options));
+
+            this.header.render();
+            this.footer.render();
+
+            this.$el.append(this.header.el, this.footer.el);
+
+            this.listenTo(this.collection, 'reset', function() {
+                if (this.collection.objectCount === 0) {
+                    this.$el.hide();
+                }
+                else {
+                    this.$el.show();
+                }
+            });
+        },
+
+        showCurrentPage: function(model, num) {
+            this.children.each(function(view) {
+                view.$el.toggle(view.model.id === num);
+            });
+        }
+    });
+
+    return {
+        Table: Table
+    };
+
+});

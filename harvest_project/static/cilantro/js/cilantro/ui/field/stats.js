@@ -1,2 +1,97 @@
-var __bind=function(t,e){return function(){return t.apply(e,arguments)}},__hasProp={}.hasOwnProperty,__extends=function(t,e){function i(){this.constructor=t}for(var n in e)__hasProp.call(e,n)&&(t[n]=e[n]);return i.prototype=e.prototype,t.prototype=new i,t.__super__=e.prototype,t};define(["jquery","underscore","backbone","marionette","../core","../base","../charts","../charts/utils"],function(t,e,i,n,o,s,r,a){var l,c,u,h,d,p,f,g,m;return d=function(t){return e.isNumber(t)?o.utils.prettyNumber(t):t},l=function(t){function e(){return this.template=__bind(this.template,this),p=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e.prototype.tagName="li",e.prototype.keyMap={min:"Min",max:"Max",avg:"Average",count:"Count",distinct_count:"Unique values"},e.prototype.template=function(t){return"<span class=stat-label>"+(this.keyMap[t.key]||t.key)+'</span>                <span class=stat-value title="'+t.value+'">'+d(t.value)+"</span>"},e}(n.ItemView),h=function(t){function e(){return f=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e.prototype.tagName="ul",e.prototype.itemView=l,e}(n.CollectionView),u=function(e){function n(){return g=n.__super__.constructor.apply(this,arguments)}return __extends(n,e),n.prototype.className="sparkline",n.prototype.chartOptions=i.Sparkline.prototype.chartOptions,n.prototype.getChartOptions=function(e){var i;return i={series:[a.getSeries(e.data)]},t.extend(!0,i,this.chartOptions),i.chart.renderTo=this.ui.chart[0],i},n}(r.FieldChart),c=function(t){function e(){return m=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e.prototype.className="field-stats",e.prototype.template="field/stats",e.prototype.regions={values:".stats-values",chart:".stats-chart"},e.prototype.onRender=function(){return null==this.model.stats||(this.values.show(new h({collection:this.model.stats})),this.model.stats.length)?void 0:this.model.stats.fetch({reset:!0})},e}(n.Layout),{FieldStats:c}});
-//@ sourceMappingURL=stats.js.map
+/* global define */
+
+define ([
+    'jquery',
+    'underscore',
+    'backbone',
+    'marionette',
+    '../core',
+    '../base',
+    '../charts',
+    '../charts/utils'
+], function($, _, Backbone, Marionette, c, base, charts, utils) {
+
+    // Prettifies a value for display
+    var prettyValue = function (value) {
+        if (_.isNumber(value)) {
+            return c.utils.prettyNumber(value);
+        }
+
+        return value;
+    };
+
+    var FieldStatValue = Marionette.ItemView.extend({
+        tagName: 'li',
+
+        template: function (data) {
+            /*
+             * This is a map of data labels to display labels. For example, when
+             * displaying data with a label of 'Distinct count', it will be rendered
+             * as 'Unique values' when this field stat value is displayed in the page.
+             * If a data label is not in this map, then the data label itself will
+             * be used.
+             */
+            var statslabel = {
+                min: 'Min',
+                max: 'Max',
+                avg: 'Average',
+                count: 'Count',
+                distinct_count: 'Unique values' // jshint ignore:line
+            };
+            return '<span class=stat-label>' + (statslabel[data.key] || data.key) +
+                   '</span> <span class=stat-value title="' + data.value + '">' +
+                   (prettyValue(data.value)) + '</span>';
+        }
+    });
+
+    var FieldStatsValues = Marionette.CollectionView.extend({
+        tagName: 'ul',
+
+        itemView: FieldStatValue
+    });
+
+    var FieldStatsChart = charts.FieldChart.extend({ // jshint ignore:line
+        className: 'sparkline',
+
+        chartOptions: Backbone.Sparkline.prototype.chartOptions,
+
+        getChartOptions: function (resp) {
+            var options = {
+                series: [utils.getSeries(resp.data)]
+            };
+            $.extend(true, options, this.chartOptions);
+            options.chart.renderTo = this.ui.chart[0];
+            return options;
+        }
+    });
+
+    var FieldStats = Marionette.Layout.extend({
+        className: 'field-stats',
+
+        template: 'field/stats',
+
+        regions: {
+            values: '.stats-values',
+            chart: '.stats-chart'
+        },
+
+        onRender: function() {
+            if (this.model.stats) {
+                this.values.show(new FieldStatsValues({
+                    collection: this.model.stats
+                }));
+
+                if (!this.model.stats.length) {
+                    this.model.stats.fetch({
+                        reset: true
+                    });
+                }
+            }
+        }
+    });
+
+    return {
+        FieldStats: FieldStats
+    };
+
+});

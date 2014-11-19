@@ -1,2 +1,208 @@
-var __hasProp={}.hasOwnProperty,__extends=function(t,e){function i(){this.constructor=t}for(var n in e)__hasProp.call(e,n)&&(t[n]=e[n]);return i.prototype=e.prototype,t.prototype=new i,t.__super__=e.prototype,t};define(["jquery","underscore","backbone","highcharts","../base","../controls","./options"],function(t,e,i,n,s,o,r){var a,l,u,c,h,p,d,f,g,v,m,y,_,w,b,x,C,k,$,E,S,P;return d={el:"chart.renderTo",type:"chart.type",height:"chart.height",width:"chart.width",labelFormatter:"plotOptions.series.dataLabels.formatter",tooltipFormatter:"tooltip.formatter",animate:"plotOptions.series.animation",categories:"xAxis.categories",title:"title.text",subtitle:"subtitle.text",xAxis:"xAxis.title.text",yAxis:"yAxis.title.text",stacking:"plotOptions.series.stacking",legend:"legend.enabled",suffix:"tooltip.valueSuffix",prefix:"tooltip.valuePrefix",series:"series"},c=function(i){function o(){return _=o.__super__.constructor.apply(this,arguments)}return __extends(o,i),o.prototype.template=function(){},o.prototype.emptyView=s.EmptyView,o.prototype.loadView=s.LoadView,o.prototype.chartOptions=r.defaults,o.prototype.initialize=function(i){var n,s,a;if(r=e.extend({},i.chart),null!=r){for(n in r)s=r[n],d[n]&&(this.setOption(d[n],s),delete r[n]);this.chartOptions=t.extend(!0,{},this.chartOptions,r)}o.__super__.initialize.call(this,i),null==(a=this.chartOptions).el&&(a.el=this.el)},o.prototype.setOption=function(t,e){var i,n,s,o,r,a;for(n=this.chartOptions,o=t.split("."),i=o.pop(),r=0,a=o.length;a>r;r++)s=o[r],null==n[s]&&(n[s]={}),n=n[s];return n[i]=e},o.prototype.getChartOptions=function(){return this.chartOptions},o.prototype.showEmptyView=function(){var t;return t=new this.emptyView({message:"No data is available for charting"}),this.$el.html(t.render().el)},o.prototype.onChartLoaded=function(){return t(".load-view").remove()},o.prototype.renderChart=function(t){var e,i;return e=new this.loadView({message:"Loading chart"}),this.$el.append(e.render().el),t.chart.events={load:this.onChartLoaded},this.chart&&"function"==typeof(i=this.chart).destroy&&i.destroy(),this.chart=new n.Chart(t)},o}(o.Control),c.setDefaultOption=function(t,i){var n,s,o,r,a,l,u,c;for(s=this.prototype.chartOptions=e.clone(this.prototype.chartOptions),l=t.split("."),n=l.pop(),o=null,r=null,u=0,c=l.length;c>u;u++)a=l[u],o=s,s=null!=o[a]?e.clone(o[a]):{},o[a]=s;return s[n]=i},a=function(t){function e(){return w=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e}(c),a.setDefaultOption("chart.type","area"),l=function(t){function e(){return b=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e}(c),l.setDefaultOption("chart.type","areaspline"),u=function(t){function e(){return x=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e}(c),u.setDefaultOption("chart.type","bar"),h=function(t){function e(){return C=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e}(c),h.setDefaultOption("chart.type","column"),p=function(t){function e(){return k=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e}(c),p.setDefaultOption("chart.type","line"),f=function(t){function e(){return $=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e}(c),f.setDefaultOption("chart.type","pie"),f.setDefaultOption("legend.enabled",!0),g=function(t){function e(){return E=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e}(c),g.setDefaultOption("chart.type","scatter"),m=function(t){function e(){return S=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e}(c),m.setDefaultOption("chart.type","spline"),v=function(t){function e(){return P=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e.prototype.chartOptions=r.sparkline,e}(c),y={Chart:c,AreaChart:a,AreaSplineChart:l,BarChart:u,ColumnChart:h,LineChart:p,PieChart:f,ScatterChart:g,SplineChart:m,Sparkline:v},e.extend(i,y),y});
-//@ sourceMappingURL=core.js.map
+/* global define */
+
+define([
+    'jquery',
+    'underscore',
+    'backbone',
+    'highcharts',
+    '../base',
+    '../controls',
+    './options'
+], function($, _, Backbone, Highcharts, base, controls, chartOptions) {
+
+    // Highcharts options are very nested.. this makes the common ones more
+    // accessible. Use the 'setOption' method to parse the options.
+    var OPTIONS_MAP = {
+        el: 'chart.renderTo',
+        type: 'chart.type',
+        height: 'chart.height',
+        width: 'chart.width',
+        labelFormatter: 'plotOptions.series.dataLabels.formatter',
+        tooltipFormatter: 'tooltip.formatter',
+        animate: 'plotOptions.series.animation',
+        categories: 'xAxis.categories',
+        title: 'title.text',
+        subtitle: 'subtitle.text',
+        xAxis: 'xAxis.title.text',
+        yAxis: 'yAxis.title.text',
+        stacking: 'plotOptions.series.stacking',
+        legend: 'legend.enabled',
+        suffix: 'tooltip.valueSuffix',
+        prefix: 'tooltip.valuePrefix',
+        series: 'series'
+    };
+
+    var Chart = controls.Control.extend({
+        template: function() {},
+
+        emptyView: base.EmptyView,
+
+        loadView: base.LoadView,
+
+        chartOptions: chartOptions.defaults,
+
+        constructor: function(options) {
+            _.bindAll(this, 'onChartLoaded');
+
+            var chartOptions = _.extend({}, options.chart);
+            if (chartOptions !== null) {
+                var value;
+
+                // Map convenience options to the real ones.
+                for (var key in chartOptions) {
+                    value = chartOptions[key];
+
+                    if (OPTIONS_MAP[key]) {
+                        this.setOption(OPTIONS_MAP[key], value);
+                        delete chartOptions[key];
+                    }
+                }
+
+                this.chartOptions = $.extend(true, {}, this.chartOptions, chartOptions);
+            }
+
+            if (typeof this.chartOptions.el === 'undefined' ||
+                    typeof this.chartOptions.el === null) {
+                this.chartOptions.el = this.el;
+            }
+
+            controls.Control.prototype.constructor.call(this, options);
+        },
+
+        // Convenience method for setting an option since the option hierarchy
+        // is so large. The 'key' may use the dot-notion for accessing nested
+        // structures.
+        setOption: function(key, value) {
+            var options = this.chartOptions,
+                toks = key.split('.'),
+                last = toks.pop();
+
+            var tok;
+            for (var i = 0; i < toks.length; i++) {
+                tok = toks[i];
+
+                if (options[tok] === null) {
+                    options[tok] = {};
+                }
+
+                options = options[tok];
+            }
+
+            options[last] = value;
+        },
+
+        getChartOptions: function() {
+            return this.chartOptions;
+        },
+
+        showEmptyView: function() {
+            var view = new this.emptyView({
+                message: 'No data is available for charting'
+            });
+
+            this.$el.html(view.render().el);
+        },
+
+        onChartLoaded: function() {
+            this.$el.find('.load-view').remove();
+        },
+
+        renderChart: function(options) {
+            this.initialize();
+
+            var view = new this.loadView({
+                message: 'Loading chart'
+            });
+
+            this.$el.append(view.render().el);
+
+            options.chart.events = {
+                load: this.onChartLoaded
+            };
+
+            if (this.chart) {
+                if (typeof this.chart.destroy === 'function') {
+                    this.chart.destroy();
+                }
+            }
+
+            this.chart = new Highcharts.Chart(options);
+        }
+
+    });
+
+    // Set a default option for the class.
+    Chart.setDefaultOption = function(key, value) {
+        var last, options, prev, prevTok, tok, toks;
+
+        options = this.prototype.chartOptions = _.clone(this.prototype.chartOptions);
+
+        toks = key.split('.');
+        last = toks.pop();
+        prev = null;
+        prevTok = null;
+
+        for (var i = 0; i < toks.length; i++) {
+            tok = toks[i];
+            prev = options;
+
+            if (prev[tok] !== null && typeof prev[tok] !== 'undefined') {
+                options = _.clone(prev[tok]);
+            }
+            else {
+                options = {};
+            }
+
+            prev[tok] = options;
+        }
+
+        options[last] = value;
+    };
+
+
+    var AreaChart = Chart.extend({});
+    AreaChart.setDefaultOption('chart.type', 'area');
+
+    var AreaSplineChart = Chart.extend({});
+    AreaSplineChart.setDefaultOption('chart.type', 'areaspline');
+
+    var BarChart = Chart.extend({});
+    BarChart.setDefaultOption('chart.type', 'bar');
+
+    var ColumnChart = Chart.extend({});
+    ColumnChart.setDefaultOption('chart.type', 'column');
+
+    var LineChart = Chart.extend({});
+    LineChart.setDefaultOption('chart.type', 'line');
+
+    var PieChart = Chart.extend({});
+    PieChart.setDefaultOption('chart.type', 'pie');
+    PieChart.setDefaultOption('legend.enabled', true);
+
+    var ScatterChart = Chart.extend({});
+    ScatterChart.setDefaultOption('chart.type', 'scatter');
+
+    var SplineChart = Chart.extend({});
+    SplineChart.setDefaultOption('chart.type', 'spline');
+
+    var Sparkline = Chart.extend({
+        chartOptions: chartOptions.sparkline
+    });
+
+    var charts = {
+        Chart: Chart,
+        AreaChart: AreaChart,
+        AreaSplineChart: AreaSplineChart,
+        BarChart: BarChart,
+        ColumnChart: ColumnChart,
+        LineChart: LineChart,
+        PieChart: PieChart,
+        ScatterChart: ScatterChart,
+        SplineChart: SplineChart,
+        Sparkline: Sparkline
+    };
+
+    _.extend(Backbone, charts);
+
+    return charts;
+});

@@ -1,2 +1,194 @@
-var __hasProp={}.hasOwnProperty,__extends=function(t,e){function i(){this.constructor=t}for(var n in e)__hasProp.call(e,n)&&(t[n]=e[n]);return i.prototype=e.prototype,t.prototype=new i,t.__super__=e.prototype,t},__slice=[].slice;define(["underscore","marionette","./base"],function(t,e,i){var n,o,s,r,a,l,c,u,h,d,p,f;return n=function(t){function e(){return c=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e.prototype.message="No page results",e}(i.EmptyView),s=function(t){function e(){return u=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e.prototype.message="Loading page...",e}(i.LoadView),l=function(e){function i(){return h=i.__super__.constructor.apply(this,arguments)}return __extends(i,e),i.prototype.template="paginator",i.prototype.requestDelay=250,i.prototype.className="paginator",i.prototype.ui={first:"[data-page=first]",prev:"[data-page=prev]",next:"[data-page=next]",last:"[data-page=last]",pageCount:".page-count",currentPage:".current-page",buttons:"[data-toggle=tooltip]"},i.prototype.modelEvents={"change:pagecount":"renderPageCount","change:currentpage":"renderCurrentPage"},i.prototype.events={"click [data-page=first]":"requestChangePage","click [data-page=prev]":"requestChangePage","click [data-page=next]":"requestChangePage","click [data-page=last]":"requestChangePage"},i.prototype.initialize=function(){return this._changePage=t.debounce(this.changePage,this.requestDelay)},i.prototype.onRender=function(){return this.ui.buttons.tooltip({animation:!1,placement:"bottom"}),this.model.pageIsLoading()?void 0:(this.renderPageCount(this.model,this.model.getPageCount()),this.renderCurrentPage.apply(this,[this.model].concat(__slice.call(this.model.getCurrentPageStats()))))},i.prototype.renderPageCount=function(t,e){return this.ui.pageCount.text(e)},i.prototype.renderCurrentPage=function(t,e,i){return this.ui.currentPage.text(e),this.ui.first.prop("disabled",!!i.first),this.ui.prev.prop("disabled",!!i.first),this.ui.next.prop("disabled",!!i.last),this.ui.last.prop("disabled",!!i.last),i.first&&(this.ui.first.tooltip("hide"),this.ui.prev.tooltip("hide")),i.last?(this.ui.next.tooltip("hide"),this.ui.last.tooltip("hide")):void 0},i.prototype.changePage=function(t){switch(t){case"first":return this.model.getFirstPage();case"prev":return this.model.getPreviousPage();case"next":return this.model.getNextPage();case"last":return this.model.getLastPage();default:throw new Error("Unknown paginator direction: "+t)}},i.prototype.requestChangePage=function(t){return this._changePage($(t.currentTarget).data("page"))},i}(e.ItemView),r=function(t){function e(){return d=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e}(e.ItemView),o=function(e){function i(){return p=i.__super__.constructor.apply(this,arguments)}return __extends(i,e),i.prototype.itemView=r,i.prototype.emptyPage=n,i.prototype.itemViewOptions=function(e,i){return t.defaults({model:e,index:i},this.options)},i}(e.CollectionView),a=function(e){function i(){return f=i.__super__.constructor.apply(this,arguments)}return __extends(i,e),i.prototype.options={list:!0},i.prototype.itemView=r,i.prototype.listView=o,i.prototype.emptyView=s,i.prototype.getItemView=function(){return this.options.list?this.listView:this.itemView},i.prototype.listViewOptions=function(t){return{collection:t.items}},i.prototype.itemViewOptions=function(e,i){var n;return n={model:e,index:i},this.options.list&&t.extend(n,this.listViewOptions(e,i)),t.defaults(n,this.options)},i.prototype.collectionEvents={"change:currentpage":"showCurentPage"},i.prototype.showCurentPage=function(t,e){return this.children.each(function(t){return t.$el.toggle(t.model.id===e)})},i}(e.CollectionView),{Paginator:l,Page:r,ListingPage:o,PageRoll:a}});
-//@ sourceMappingURL=paginator.js.map
+/* global define */
+
+define([
+    'jquery',
+    'underscore',
+    'marionette',
+    './base',
+    '../constants'
+], function($, _, Marionette, base, constants) {
+
+    var EmptyPage = base.EmptyView.extend({
+        message: 'No page results'
+    });
+
+    var LoadingPage = base.LoadView.extend({
+        message: 'Loading page...'
+    });
+
+    // Set of pagination links that are used to control/navigation the bound
+    // model. The model is assumed to implement the 'paginator protocol', see
+    // cilantro/models/paginator.
+    var Paginator = Marionette.ItemView.extend({
+        template: 'paginator',
+
+        className: 'paginator',
+
+        ui: {
+            first: '[data-page=first]',
+            prev: '[data-page=prev]',
+            next: '[data-page=next]',
+            last: '[data-page=last]',
+            pageCount: '.page-count',
+            currentPage: '.current-page',
+            buttons: '[data-toggle=tooltip]'
+        },
+
+        modelEvents: {
+            'change:pagecount': 'renderPageCount',
+            'change:currentpage': 'renderCurrentPage'
+        },
+
+        events: {
+            'click [data-page]': 'requestChangePage'
+        },
+
+        initialize: function() {
+            this._changePage = _.debounce(this.changePage, constants.REQUEST_DELAY);
+        },
+
+        onRender: function() {
+            // The tooltip call MUST be done before the render calls below or
+            // the tooltip options set here will not be respected because some
+            // of the buttons will be disabled.
+            this.ui.buttons.tooltip({
+                animation: false,
+                placement: 'bottom'
+            });
+
+            if (!this.model.pageIsLoading()) {
+                this.renderPageCount(this.model, this.model.getPageCount());
+                var args = [this.model].concat(this.model.getCurrentPageStats());
+                this.renderCurrentPage.apply(this, args);
+            }
+        },
+
+        renderPageCount: function(model, value) {
+            this.ui.pageCount.text(value);
+        },
+
+        renderCurrentPage: function(model, value, options) {
+            this.ui.currentPage.text(value);
+            this.ui.first.prop('disabled', !!options.first);
+            this.ui.prev.prop('disabled', !!options.first);
+            this.ui.next.prop('disabled', !!options.last);
+            this.ui.last.prop('disabled', !!options.last);
+
+            // If we have disabled the buttons then we need to force hide the
+            // tooltip to prevent it from being permanently visible.
+            if (!!options.first) {
+                this.ui.first.tooltip('hide');
+                this.ui.prev.tooltip('hide');
+            }
+
+            if (!!options.last) {
+                this.ui.next.tooltip('hide');
+                this.ui.last.tooltip('hide');
+            }
+        },
+
+        changePage: function(newPage) {
+            switch (newPage) {
+                case 'first':
+                    return this.model.getFirstPage();
+                case 'prev':
+                    return this.model.getPreviousPage();
+                case 'next':
+                    return this.model.getNextPage();
+                case 'last':
+                    return this.model.getLastPage();
+                default:
+                    throw new Error('Unknown paginator direction: ' + newPage);
+            }
+        },
+
+        requestChangePage: function(event) {
+            this._changePage($(event.currentTarget).data('page'));
+        }
+    });
+
+    // Page for representing model-based data.
+    var Page = Marionette.ItemView.extend({});
+
+    // Page for representing collection-based data.
+    var ListingPage = Marionette.CollectionView.extend({
+        itemView: Page,
+
+        emptyPage: EmptyPage,
+
+        itemViewOptions: function(item, index) {
+            return _.defaults({model: item, index: index}, this.options);
+        }
+    });
+
+    // Renders multiples pages as requested, but only shows the current
+    // page. This is delegated by the paginator-based collection bound to
+    // this view.
+    //
+    // The contained views may be model-based or collection-based. This is
+    // toggled based on the `options.list` flag. If true, the `listView`
+    // will be used as the item view class. Otherwise the standard `itemView`
+    // will be used for model-based data.
+    //
+    // If list is true, the `listViewOptions` will be called to produce the
+    // view options for the collection view. By default the item passed in
+    // is assumed to have an `items` collection on it that will be used.
+    var PageRoll = Marionette.CollectionView.extend({
+        options: {
+            list: true
+        },
+
+        itemView: Page,
+
+        listView: ListingPage,
+
+        // The first page is guaranteed (assumed) to be fetch and rendered,
+        // thus the empty view for the page roll is the loading state.
+        emptyView: LoadingPage,
+
+        collectionEvents: {
+            'change:currentpage': 'showCurrentPage'
+        },
+
+        // Toggle between list-based versus item-based page roll
+        getItemView: function() {
+            if (this.options.list) {
+                return this.listView;
+            }
+
+            return this.itemView;
+        },
+
+        listViewOptions: function(item) {
+            return {
+                collection: item.items
+            };
+        },
+
+        itemViewOptions: function(item, index) {
+            var options = {
+                model: item,
+                index: index
+            };
+
+            if (this.options.list) {
+                _.extend(options, this.listViewOptions(item, index));
+            }
+
+            return _.defaults(options, this.options);
+        },
+
+        showCurrentPage: function(model, num) {
+            this.children.each(function(view) {
+                view.$el.toggle(view.model.id === num);
+            });
+        }
+    });
+
+    return {
+        Paginator: Paginator,
+        Page: Page,
+        ListingPage: ListingPage,
+        PageRoll: PageRoll
+    };
+});

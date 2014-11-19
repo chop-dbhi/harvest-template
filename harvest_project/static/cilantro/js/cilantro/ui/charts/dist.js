@@ -1,2 +1,153 @@
-var __hasProp={}.hasOwnProperty,__extends=function(t,e){function i(){this.constructor=t}for(var n in e)__hasProp.call(e,n)&&(t[n]=e[n]);return i.prototype=e.prototype,t.prototype=new i,t.__super__=e.prototype,t},__bind=function(t,e){return function(){return t.apply(e,arguments)}},__indexOf=[].indexOf||function(t){for(var e=0,i=this.length;i>e;e++)if(e in this&&this[e]===t)return e;return-1};define(["jquery","underscore","../base","./core","./utils"],function(t,e,i,n,s){var o,r,a,u;return o=function(t){function e(){return a=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e.prototype.message="Chart loading...",e}(i.LoadView),r=function(i){function n(){return this.setValue=__bind(this.setValue,this),this.chartClick=__bind(this.chartClick,this),u=n.__super__.constructor.apply(this,arguments)}return __extends(n,i),n.prototype.template="charts/chart",n.prototype.loadView=o,n.prototype.ui={chart:".chart",heading:".heading",status:".heading .status"},n.prototype.showLoadView=function(){var t;return(t=new this.loadView).render(),this.ui.chart.html(t.el)},n.prototype.chartClick=function(t){var e,i;return e=null!=(i=t.point.category)?i:t.point.name,t.point.select(!t.point.selected,!0),this.change()},n.prototype.interactive=function(t){var e,i;return"pie"===(e=null!=(i=t.chart)?i.type:void 0)?!0:"column"===e&&null!=t.xAxis.categories?!0:!1},n.prototype.getChartOptions=function(e){var i;return i=s.processResponse(e,[this.model]),i.clustered?this.ui.status.text("Clustered").show():this.ui.status.hide(),this.interactive(i)&&this.setOption("plotOptions.series.events.click",this.chartClick),t.extend(!0,i,this.chartOptions),i.chart.renderTo=this.ui.chart[0],i},n.prototype.getField=function(){return this.model.id},n.prototype.getValue=function(){var t,e;return e=this.chart.getSelectedPoints(),function(){var i,n,s;for(s=[],i=0,n=e.length;n>i;i++)t=e[i],s.push(t.category);return s}()},n.prototype.getOperator=function(){return"in"},n.prototype.removeChart=function(){return n.__super__.removeChart.apply(this,arguments),this.node?this.node.destroy():void 0},n.prototype.onRender=function(){var t=this;return null!=this.options.parentView&&this.ui.chart.width(this.options.parentView.$el.width()),this.showLoadView(),this.model.distribution(function(e){var i;if(!t.isClosed)return i=t.getChartOptions(e),e.size?t.renderChart(i):t.showEmptyView(i)})},n.prototype.setValue=function(t){var i,n,s,o,r,a;if(e.isArray(t)||(t=[]),null!=this.chart)for(n=this.chart.series[0].points,s=0,o=n.length;o>s;s++)i=n[s],i.select(null!=(r=i.name)?r:(a=i.category,__indexOf.call(t,a)>=0),!0)},n}(n.Chart),{FieldChart:r}});
-//@ sourceMappingURL=dist.js.map
+/* global define */
+
+define([
+    'jquery',
+    'underscore',
+    '../base',
+    './core',
+    './utils'
+], function($, _, base, charts, utils) {
+
+    var ChartLoading = base.LoadView.extend({
+        message: 'Chart loading...'
+    });
+
+    var FieldChart = charts.Chart.extend({
+        template: 'charts/chart',
+
+        loadView: ChartLoading,
+
+        ui: {
+            chart: '.chart',
+            heading: '.heading',
+            status: '.heading .status'
+        },
+
+        initialize: function() {
+            _.bindAll(this, 'chartClick', 'setValue');
+        },
+
+        showLoadView: function () {
+            var view = new this.loadView();
+            view.render();
+            this.ui.chart.html(view.el);
+        },
+
+        chartClick: function(event) {
+            event.point.select(!event.point.selected, true);
+            this.change();
+        },
+
+        interactive: function(options) {
+            var type;
+
+            if (options.chart) {
+                type = options.chart.type;
+            }
+
+            if (type === 'pie' || (type === 'column' && options.xAxis.categories)) {
+                return true;
+            }
+
+            return false;
+        },
+
+        getChartOptions: function(resp) {
+            var options = utils.processResponse(resp, [this.model]);
+
+            if (options.clustered) {
+                this.ui.status.text('Clustered').show();
+            }
+            else {
+                this.ui.status.hide();
+            }
+
+            if (this.interactive(options)) {
+                this.setOptions('plotOptions.series.events.click', this.chartClick);
+            }
+
+            $.extend(true, options, this.chartOptions);
+            options.chart.renderTo = this.ui.chart[0];
+
+            return options;
+        },
+
+        getField: function() {
+            return this.model.id;
+        },
+
+        getValue: function() {
+            return _.pluck(this.chart.getSelectedPoints(), 'category');
+        },
+
+        getOperator: function() {
+            return 'in';
+        },
+
+        removeChart: function() {
+            charts.Chart.prototype.removeChart.apply(this, arguments);
+
+            if (this.node) {
+                this.node.destroy();
+            }
+        },
+
+        onRender: function() {
+            // Explicitly set the width of the chart so Highcharts knows
+            // how to fill out the space. Otherwise if this element is
+            // not in the DOM by the time the distribution request is finished,
+            // the chart will default to an arbitary size.
+            if (this.options.parentView) {
+                this.ui.chart.width(this.options.parentView.$el.width());
+            }
+
+            this.showLoadView();
+
+            var _this = this;
+            this.model.distribution(
+                function(resp) {
+                    if (_this.isClosed) return;
+
+                    resp.data = _.sortBy(resp.data, function(element) {
+                        return element.values[0];
+                    });
+
+                    var options = _this.getChartOptions(resp);
+
+                    if (resp.size) {
+                        _this.renderChart(options);
+                    }
+                    else {
+                        _this.showEmptyView(options);
+                    }
+              });
+        },
+
+        setValue: function(value) {
+            if (!_.isArray(value)) value = [];
+
+            if (this.chart !== null) {
+                var points = this.chart.series[0].points,
+                    point,
+                    select;
+
+                for (var i = 0; i < points.length; i++) {
+                    point = points[i];
+                    select = false;
+
+                    if (point.name !== null || value.indexOf(point.category) !== -1) {
+                        select = true;
+                    }
+
+                    point.select(select, true);
+                }
+            }
+        }
+    });
+
+
+    return {
+        FieldChart: FieldChart
+    };
+
+});

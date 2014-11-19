@@ -1,2 +1,230 @@
-var __hasProp={}.hasOwnProperty,__extends=function(t,e){function i(){this.constructor=t}for(var n in e)__hasProp.call(e,n)&&(t[n]=e[n]);return i.prototype=e.prototype,t.prototype=new i,t.__super__=e.prototype,t},__bind=function(t,e){return function(){return t.apply(e,arguments)}};define(["underscore","backbone","./models/base"],function(t,e,i){var n,s,o,r,a,u,h,l,c,d;return r=function(t){function e(){return c=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e.prototype.defaults={visible:!0},e.prototype.show=function(){return this.set({visible:!0})},e.prototype.hide=function(){return this.set({visible:!1})},e}(e.Model),a=function(t){function e(){return d=e.__super__.constructor.apply(this,arguments)}return __extends(e,t),e.prototype.model=r,e}(e.Collection),n=function(t){function e(t,i,n){i instanceof r||(i=new r(i)),this.index=i,e.__super__.constructor.call(this,t,n)}return __extends(e,t),e.prototype.size=function(){return 1},e.prototype.width=function(){return 1},e}(e.Model),h=function(e){function i(t,e,n){this.model=__bind(this.model,this),this.indexes=e,i.__super__.constructor.call(this,t,n)}return __extends(i,e),i.prototype.model=function(e){var i;return i=this.indexes.at(t.keys(this._byId).length),new n({value:e},i)},i}(e.Collection),u=function(e){function i(e,n,s){var o;null==s&&(s={}),n instanceof a||(n=new a(n)),this.indexes=n,t.isArray(e)?(o=e,e=null):s.parse=!0,this.data=new h(o,n),i.__super__.constructor.call(this,e,s)}return __extends(i,e),i.prototype.parse=function(t,e){return this.data.reset(t.values,e),delete t.values,t},i.prototype.isColumn=function(){return 1===this.width()},i.prototype.isRow=function(){return!this.isColumn()},i.prototype.size=function(){return this.isColumn()?this.data.length:1},i.prototype.width=function(){return this.indexes.length},i}(e.Model),l=function(t){function e(t,i,n){this.model=__bind(this.model,this),this.indexes=i,e.__super__.constructor.call(this,t,n)}return __extends(e,t),e.prototype.model=function(t,e){return new u(t,this.indexes,e)},e}(e.Collection),s=function(e){function i(e,n,s){var o;null==s&&(s={}),n instanceof a||(n=new a(n)),this.indexes=n,t.isArray(e)?(o=e,e=null):s.parse=!0,this.series=new l(o,n),i.__super__.constructor.call(this,e,s)}return __extends(i,e),i.prototype.parse=function(t,e){return i.__super__.parse.call(this,t,e),this.indexes.reset(t.keys,e),this.series.reset(t.objects,e),delete t.keys,delete t.objects,t},i.prototype.size=function(){return this.series.length},i.prototype.width=function(){return this.indexes.length},i.prototype.column=function(t){var e;return e=this.series.map(function(e){return e.data.at(t)}),new u(e,this.indexes.at(t))},i}(i.Model),o=function(t){function e(t,i){this.indexes=new a,this.on("reset",function(t){var e;return(e=t.models[0])?this.indexes.reset(e.indexes.models):void 0}),this.on("add",function(t,e){return 1===e.length?this.indexes.reset(t.indexes.models):void 0}),e.__super__.constructor.call(this,t,i)}return __extends(e,t),e.prototype.model=s,e}(i.Collection),{FrameArray:o,Frame:s,Series:u,Datum:n,Index:r,Indexes:a}});
-//@ sourceMappingURL=structs.js.map
+/* global define */
+
+define([
+    'underscore',
+    'backbone',
+    './models/base'
+], function(_, Backbone, base) {
+
+    var Index = Backbone.Model.extend({
+        defaults: {
+            visible: true
+        },
+
+        show: function() {
+            this.set({
+                visible: true
+            });
+        },
+
+        hide: function() {
+            this.set({
+                visible: false
+            });
+        }
+    });
+
+    var Indexes = Backbone.Collection.extend({
+        model: Index
+    });
+
+    var Datum = Backbone.Model.extend({
+        constructor: function(attrs, index, options) {
+            if (!(index instanceof Index)) {
+                index = new Index(index);
+            }
+
+            this.index = index;
+
+            Backbone.Model.prototype.constructor.call(this, attrs, options);
+        },
+
+        size: function() {
+            return 1;
+        },
+
+        width: function() {
+            return 1;
+        }
+    });
+
+    // A collection of Datum objects which serves as an internal container for
+    // the Series.
+    var _DatumArray = Backbone.Collection.extend({
+        constructor: function(attrs, indexes, options) {
+            this.indexes = indexes;
+
+            var _this = this;
+
+            this.model = function(value, options) {
+                // Collections length are not updated immediately so this uses the
+                // internal hash to determine the next index.
+                var index = _this.indexes.at(_.keys(_this._byId).length);
+
+                Datum.prototype.constructor.call(this, {value: value}, index, options);
+            };
+
+            this.model.prototype = Datum.prototype;
+
+            Backbone.Collection.prototype.constructor.call(this, attrs, options);
+        }
+    });
+
+    var Series = Backbone.Model.extend({
+        constructor: function(attrs, indexes, options) {
+            var data;
+
+            if (!options) options = {};
+
+            if (!(indexes instanceof Indexes)) {
+                indexes = new Indexes(indexes);
+            }
+
+            this.indexes = indexes;
+
+            if (_.isArray(attrs)) {
+                data = attrs;
+                attrs = null;
+            }
+            else {
+                options.parse = true;
+            }
+
+            this.data = new _DatumArray(data, indexes);
+
+            Backbone.Model.prototype.constructor.call(this, attrs, options);
+        },
+
+        parse: function(resp, options) {
+            this.data.reset(resp.values, options);
+            delete resp.values;
+            return resp;
+        },
+
+        isColumn: function() {
+            return this.width() === 1;
+        },
+
+        isRow: function() {
+            return !this.isColumn();
+        },
+
+        size: function() {
+            if (this.isColumn()) {
+                return this.data.length;
+            }
+
+            return 1;
+        },
+
+        width: function() {
+            return this.indexes.length;
+        }
+    });
+
+    // Collection of Series objects that serves as an internal container for
+    // the Frame object.
+    var _SeriesArray = Backbone.Collection.extend({
+        constructor: function(attrs, indexes, options) {
+            this.indexes = indexes;
+
+            var _this = this;
+
+            this.model = function(attrs, options) {
+                Series.prototype.constructor.call(this, attrs, _this.indexes, options);
+            };
+
+            this.model.prototype = Series.prototype;
+
+            Backbone.Collection.prototype.constructor.call(this, attrs, options);
+        }
+    });
+
+    var Frame = base.Model.extend({
+        constructor: function(attrs, indexes, options) {
+            var data;
+
+            if (!options) options = {};
+
+            if (!(indexes instanceof Indexes)) {
+                indexes = new Indexes(indexes);
+            }
+
+            this.indexes = indexes;
+
+            if (_.isArray(attrs)) {
+                data = attrs;
+                attrs = null;
+            }
+            else {
+                options.parse = true;
+            }
+
+            this.series = new _SeriesArray(data, indexes);
+
+            base.Model.prototype.constructor.call(this, attrs, options);
+        },
+
+        parse: function(resp, options) {
+            base.Model.prototype.parse.call(this, resp, options);
+
+            this.indexes.reset(resp.keys, options);
+            this.series.reset(resp.objects, options);
+
+            delete resp.keys;
+            delete resp.objects;
+
+            return resp;
+        },
+
+        size: function() {
+            return this.series.length;
+        },
+
+        width: function() {
+            return this.indexes.length;
+        },
+
+        column: function(index) {
+            var data = this.series.map(function(series) {
+                return series.data.at(index);
+            });
+
+            return new Series(data, this.indexes.at(index));
+        }
+    });
+
+    var FrameArray = base.Collection.extend({
+        model: Frame,
+
+        constructor: function(attrs, options) {
+            this.indexes = new Indexes();
+
+            this.on('reset', function(collection) {
+                var model = collection.models[0];
+
+                if (model) {
+                    return this.indexes.reset(model.indexes.models);
+                }
+            });
+
+            this.on('add', function(model, collection) {
+                if (collection.length === 1) {
+                    return this.indexes.reset(model.indexes.models);
+                }
+            });
+
+            base.Collection.prototype.constructor.call(this, attrs, options);
+        }
+    });
+
+    return {
+        Datum: Datum,
+        Frame: Frame,
+        FrameArray: FrameArray,
+        Index: Index,
+        Indexes: Indexes,
+        Series: Series
+    };
+
+});

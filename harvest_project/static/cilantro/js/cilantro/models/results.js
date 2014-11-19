@@ -1,2 +1,152 @@
-var __hasProp={}.hasOwnProperty,__extends=function(t,e){function i(){this.constructor=t}for(var n in e)__hasProp.call(e,n)&&(t[n]=e[n]);return i.prototype=e.prototype,t.prototype=new i,t.__super__=e.prototype,t},__bind=function(t,e){return function(){return t.apply(e,arguments)}};define(["underscore","../core","../constants","../structs","./paginator"],function(t,e,i,n,s){var o,r,a,h;return r=function(i){function n(){return a=n.__super__.constructor.apply(this,arguments)}return __extends(n,i),n.prototype.idAttribute="page_num",n.prototype.url=function(){var i;return i=t.result(this.collection,"url"),e.utils.alterUrlParams(i,{page:this.id,per_page:this.collection.perPage})},n}(n.Frame),o=function(n){function s(){return this.fetch=__bind(this.fetch,this),this.markAsDirty=__bind(this.markAsDirty,this),this.onWorkspaceUnload=__bind(this.onWorkspaceUnload,this),this.onWorkspaceLoad=__bind(this.onWorkspaceLoad,this),h=s.__super__.constructor.apply(this,arguments)}return __extends(s,n),s.prototype.initialize=function(){return this.isDirty=!0,this.isWorkspaceOpen=!1,this._refresh=t.debounce(t.bind(this.refresh,this),i.CLICK_DELAY),e.on(e.VIEW_SYNCED,this.markAsDirty),e.on(e.CONTEXT_SYNCED,this.markAsDirty),this.on("workspace:load",this.onWorkspaceLoad),this.on("workspace:unload",this.onWorkspaceUnload)},s.prototype.onWorkspaceLoad=function(){return this.isWorkspaceOpen=!0,this._refresh()},s.prototype.onWorkspaceUnload=function(){return this.isWorkspaceOpen=!1},s.prototype.markAsDirty=function(){return this.isDirty=!0,this._refresh()},s.prototype.fetch=function(t){var i,n=this;return null==t&&(t={}),null!=(i=e.config.get("session.defaults.data.preview"))&&(t.type="POST",t.contentType="application/json",t.data=JSON.stringify(i)),this.isDirty&&this.isWorkspaceOpen?(this.isDirty=!1,null==t.cache&&(t.cache=!1),s.__super__.fetch.call(this,t)):{done:function(){return delete n.pending}}},s}(n.FrameArray),t.extend(o.prototype,s.PaginatorMixin),o.prototype.model=r,{Results:o}});
-//@ sourceMappingURL=results.js.map
+/* global define */
+
+define([
+    'underscore',
+    '../core',
+    '../constants',
+    '../structs',
+    './paginator'
+], function(_, c, constants, structs, paginator) {
+
+    var ResultsPage = structs.Frame.extend({
+        idAttribute: 'page_num',
+
+        url: function() {
+            var url = _.result(this.collection, 'url');
+
+            return c.utils.alterUrlParams(url, {
+                page: this.id,
+                per_page: this.collection.perPage   // jshint ignore:line
+            });
+        }
+    });
+
+    // Array of result frames (pages). The first fetch sets the state of the
+    // collection including the frame size, number of possible frames, etc. A
+    // refresh resets the collection as well as changes to the frame size.
+    var Results = structs.FrameArray.extend({
+        initialize: function() {
+            _.bindAll(this, 'fetch', 'markAsDirty', 'onWorkspaceUnload',
+                      'onWorkspaceLoad', 'refresh');
+
+            // We start in a dirty state because initially, we have not
+            // retrieved the results yet so the view and context are
+            // technically out of sync with this results collection since the
+            // collection is empty and the server may have results.
+            this.isDirty = true;
+            this.isWorkspaceOpen = false;
+
+            // Debounce refresh to ensure changes are reflected up to the last
+            // trigger. This is specifically important when the context and
+            // view are saved simultaneously. The refresh will trigger after
+            // the second.
+            this._refresh = _.debounce(this.refresh, constants.CLICK_DELAY);
+
+            c.on(c.VIEW_SYNCED, this.markAsDirty);
+            c.on(c.CONTEXT_SYNCED, this.markAsDirty);
+
+            this.on('workspace:load', this.onWorkspaceLoad);
+            this.on('workspace:unload', this.onWorkspaceUnload);
+        },
+
+        onWorkspaceLoad: function() {
+            this.isWorkspaceOpen = true;
+            this._refresh();
+        },
+
+        onWorkspaceUnload: function() {
+            this.isWorkspaceOpen = false;
+        },
+
+        markAsDirty: function() {
+            this.isDirty = true;
+            this._refresh();
+        },
+
+        fetch: function(options) {
+            if (!options) options = {};
+
+            var data;
+            if ((data = c.config.get('session.defaults.data.preview'))) {
+                options.type = 'POST';
+                options.contentType = 'application/json';
+                options.data = JSON.stringify(data);
+            }
+
+            if (this.isDirty && this.isWorkspaceOpen) {
+                // Since we are making the fetch call immediately below, the
+                // data will be synced again to the current view/context to
+                // mark the results as clean for the time being.
+                this.isDirty = false;
+
+                if (options.cache === undefined) {
+                    options.cache = false;
+                }
+
+                return structs.FrameArray.prototype.fetch.call(this, options);
+            }
+            else {
+                // If the results aren't dirty or the workspace isn't open then
+                // we simply abort this fetch call and remove the pending flag.
+                // If we do not include this done method then calls from
+                // refresh() to fetch that don't actually result in a call to
+                // the server will never call the done() handler in the
+                // refresh() call to fetch().
+                var _this = this;
+                return {
+                    done: function() {
+                        return delete _this.pending;
+                    }
+                };
+            }
+        }
+    });
+
+    // Mix-in paginator functionality for results.
+    _.extend(Results.prototype, paginator.PaginatorMixin);
+
+    // Override the default getPage behavior to respect the preview config
+    // options. Without this, requests for different pages will not use the
+    // view set in the config option and will use the session view instead
+    // resulting in disparity between the first page and all other pages.
+    Results.prototype.getPage = function(num, options) {
+        if (!options) options = {};
+
+        if (!this.hasPage(num)) return;
+
+        var model = this.get(num);
+        if (!model && options.load !== false) {
+            model = new this.model({
+                page_num: num       // jshint ignore:line
+            });
+
+            model.pending = true;
+            this.add(model);
+
+            var fetchOptions = {},
+                data;
+            if ((data = c.config.get('session.defaults.data.preview'))) {
+                fetchOptions.type = 'POST';
+                fetchOptions.contentType = 'application/json';
+                fetchOptions.data = JSON.stringify(data);
+            }
+            model.fetch(fetchOptions).done(function() {
+                delete model.pending;
+            });
+        }
+
+        if (model && options.active !== false) {
+            this.setCurrentPage(num);
+        }
+
+        return model;
+    };
+
+    // Set the custom model for this Paginator.
+    Results.prototype.model = ResultsPage;
+
+    return {
+        Results: Results
+    };
+
+});

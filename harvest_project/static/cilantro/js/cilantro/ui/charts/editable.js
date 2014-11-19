@@ -1,2 +1,273 @@
-var __hasProp={}.hasOwnProperty,__extends=function(t,e){function i(){this.constructor=t}for(var n in e)__hasProp.call(e,n)&&(t[n]=e[n]);return i.prototype=e.prototype,t.prototype=new i,t.__super__=e.prototype,t};define(["jquery","underscore","./dist","./axis"],function(t,e,i,n){var s,o;return s=function(s){function r(){return o=r.__super__.constructor.apply(this,arguments)}return __extends(r,s),r.prototype.template="charts/editable-chart",r.prototype.events=e.extend({"click .fullsize":"toggleExpanded"},i.FieldChart.prototype.events),r.prototype.ui=e.extend({toolbar:".btn-toolbar",fullsizeToggle:".fullsize",form:".editable",xAxis:"[name=x-Axis]",yAxis:"[name=y-Axis]",series:"[name=series]"},i.FieldChart.prototype.ui),r.prototype.onRender=function(){var t;return this.options.editable===!1?(this.ui.form.detach(),this.ui.toolbar.detach()):(this.xAxis=new n.FieldAxis({el:this.ui.xAxis,collection:this.collection}),this.yAxis=new n.FieldAxis({el:this.ui.yAxis,collection:this.collection}),this.series=new n.FieldAxis({el:this.ui.series,enumerableOnly:!0,collection:this.collection}),this.model?(this.model.get("xAxis")&&this.ui.form.hide(),(t=this.model.get("expanded"))?this.expand():this.contract()):void 0)},r.prototype.customizeOptions=function(e){var i;return this.ui.status.detach(),this.ui.heading.text(e.title.text),e.title.text="",e.series[0]?(this.ui.form.hide(),i=[],e.clustered&&i.push("Clustered"),i[0]&&(this.ui.status.text(i.join(", ")).show(),this.ui.heading.append(this.$status)),this.interactive(e)&&this.enableChartEvents(),t.extend(!0,e,this.chartOptions),e.chart.renderTo=this.ui.chart[0],e):(this.ui.chart.html("<p class=no-data>Unfortunately, there is                    no data to graph here.</p>"),void 0)},r.prototype.changeChart=function(t){var e=this;return t&&t.preventDefault(),this.collection.when(function(){var i,n,s,o,r,a,l;return null==t&&((a=e.model.get("xAxis"))&&e.xAxis.$el.val(a.toString()),(l=e.model.get("yAxis"))&&e.yAxis.$el.val(l.toString()),(s=e.model.get("series"))&&e.series.$el.val(s.toString())),a=e.xAxis.getSelected(),l=e.yAxis.getSelected(),s=e.series.getSelected(),a?(r=e.model.get("_links").distribution.href,n=[a],i="dimension="+a.id,l&&(n.push(l),i=i+"&dimension="+l.id),s&&(o=l?2:1,i=i+"&dimension="+s.id),t&&e.model&&e.model.set({xAxis:a.id,yAxis:l?l.id:void 0,series:s?s.id:void 0}),e.update(r,i,n,o)):void 0})},r.prototype.disableSelected=function(e){var i,n;return i=t(e.target),this.xAxis.el===e.target?(this.yAxis.$("option").prop("disabled",!1),this.series.$("option").prop("disabled",!1)):this.yAxis.el===e.target?(this.xAxis.$("option").prop("disabled",!1),this.series.$("option").prop("disabled",!1)):(this.xAxis.$("option").prop("disabled",!1),this.yAxis.$("option").prop("disabled",!1)),""!==(n=i.val())?this.xAxis.el===e.target?(this.yAxis.$("option[value="+n+"]").prop("disabled",!0).val(""),this.series.$("option[value="+n+"]").prop("disabled",!0).val("")):this.yAxis.el===e.target?(this.xAxis.$("option[value="+n+"]").prop("disabled",!0).val(""),this.series.$("option[value="+n+"]").prop("disabled",!0).val("")):(this.xAxis.$("option[value="+n+"]").prop("disabled",!0).val(""),this.yAxis.$("option[value="+n+"]").prop("disabled",!0).val("")):void 0},r.prototype.toggleExpanded=function(){var t;return t=this.model.get("expanded"),t?this.contract():this.expand(),this.model.save({expanded:!t})},r.prototype.resize=function(){var t;return t=this.ui.chart.width(),this.chart?this.chart.setSize(t,null,!1):void 0},r.prototype.expand=function(){return this.$fullsizeToggle.children("i").removeClass("icon-resize-small").addClass("icon-resize-full"),this.$el.addClass("expanded"),this.resize()},r.prototype.contract=function(){return this.$fullsizeToggle.children("i").removeClass("icon-resize-full").addClass("icon-resize-small"),this.$el.removeClass("expanded"),this.resize()},r.prototype.hideToolbar=function(){return this.ui.toolbar.fadeOut(200)},r.prototype.showToolbar=function(){return this.ui.toolbar.fadeIn(200)},r.prototype.toggleEdit=function(){return this.ui.form.is(":visible")?this.ui.form.fadeOut(300):this.ui.form.fadeIn(300)},r}(i.FieldChart),{EditableFieldChart:s}});
-//@ sourceMappingURL=editable.js.map
+/* global define */
+
+define([
+    'jquery',
+    'underscore',
+    './dist',
+    './axis'
+], function($, _, dist, axis) {
+
+    var EditableFieldChart = dist.FieldChart.extend({
+        template: 'charts/editable-chart',
+
+        toolbarAnimationTime: 200,
+
+        formAnimationTime: 300,
+
+        events: _.extend({
+            'click .fullsize': 'toggleExpanded'
+        }, dist.FieldChart.prototype.events),
+
+        ui: _.extend({
+            toolbar: '.btn-toolbar',
+            fullsizeToggle: '.fullsize',
+            form: '.editable',
+            xAxis: '[name=x-Axis]',
+            yAxis: '[name=y-Axis]',
+            series: '[name=series]'
+        }, dist.FieldChart.prototype.ui),
+
+        onRender: function() {
+            if (this.options.editable === false) {
+                this.ui.form.detach();
+                this.ui.toolbar.detach();
+            }
+            else {
+                this.xAxis = new axis.FieldAxis({
+                    el: this.ui.xAxis,
+                    collection: this.collection
+                });
+
+                this.yAxis = new axis.FieldAxis({
+                    el: this.ui.yAxis,
+                    collection: this.collection
+                });
+
+                this.series = new axis.FieldAxis({
+                    el: this.ui.series,
+                    enumerableOnly: true,
+                    collection: this.collection
+                });
+
+                if (this.model) {
+                    if (this.model.get('xAxis')) {
+                        this.ui.form.hide();
+                    }
+
+                    if (this.model.get('expanded')) {
+                        this.expand();
+                    }
+                    else {
+                        this.contract();
+                    }
+                }
+            }
+        },
+
+        customizeOptions: function(options) {
+            this.ui.status.detach();
+
+            this.ui.heading.text(options.title.text);
+            options.title.text = '';
+
+            // Check if any data is present.
+            if (!options.series[0]) {
+                this.ui.chart.html('<p class=no-data>Unfortunately, there is no ' +
+                                   'data to graph here.</p>');
+                return;
+            }
+
+            this.ui.form.hide();
+
+            var statusText = [];
+            if (options.clustered) {
+                statusText.push('Clustered');
+            }
+
+            if (statusText[0]) {
+                this.ui.status.text(statusText.join(', ')).show();
+                this.ui.heading.append(this.$status);
+            }
+
+            if (this.interactive(options)) {
+                this.enableChartEvents();
+            }
+
+            $.extend(true, options, this.chartOptions);
+            options.chart.renderTo = this.ui.chart[0];
+
+            return options;
+        },
+
+        // Ensure rapid successions of this method do not occur.
+        changeChart: function(event) {
+            if (event) {
+                event.preventDefault();
+            }
+
+            var _this = this;
+            this.collection.when(function() {
+                var xAxis, yAxis, series, seriesIdx;
+
+                // TODO fix this nonsense
+                if (event === null || typeof event === 'undefined') {
+                    xAxis = _this.model.get('xAxis');
+                    if (xAxis) {
+                        _this.xAxis.$el.val(xAxis.toString());
+                    }
+
+                    yAxis = _this.model.get('yAxis');
+                    if (yAxis) {
+                        _this.yAxis.$el.val(yAxis.toString());
+                    }
+
+                    series = _this.model.get('series');
+                    if (series) {
+                        this.series.$el.val(series.toString());
+                    }
+                }
+
+                xAxis = _this.xAxis.getSelected();
+                yAxis = _this.yAxis.getSelected();
+                series = _this.series.getSelected();
+
+                if (!xAxis) return;
+
+                var url = _this.model.get('_links').distribution.href;
+
+                var fields = [xAxis];
+                var data = 'dimension=' + xAxis.id;
+
+                if (yAxis) {
+                    fields.push(yAxis);
+                    data = data + '&dimension=' + yAxis.id;
+                }
+
+                if (series) {
+                    if (yAxis) {
+                        seriesIdx = 2;
+                    }
+                    else {
+                        seriesIdx = 1;
+                    }
+
+                    data = data + '&dimension=' + series.id;
+                }
+
+                if (event && _this.model) {
+                    _this.model.set({
+                        xAxis: xAxis.id,
+                        yAxis: (yAxis) ? yAxis.id : null,
+                        series: (series) ? series.id : null
+                    });
+                }
+
+                _this.update(url, data, fields, seriesIdx);
+            });
+        },
+
+        // Disable selected fields since using the same field for multiple
+        // axes doesn't make sense.
+        disableSelected: function(event) {
+            var $target = $(event.target);
+
+            // Changed to an empty value, unhide other dropdowns.
+            if (this.xAxis.el === event.target) {
+                this.yAxis.$('option').prop('disabled', false);
+                this.series.$('option').prop('disabled', false);
+            }
+            else if (this.yAxis.el === event.target) {
+                this.xAxis.$('option').prop('disabled', false);
+                this.series.$('option').prop('disabled', false);
+            }
+            else {
+                this.xAxis.$('option').prop('disabled', false);
+                this.yAxis.$('option').prop('disabled', false);
+            }
+
+            var value = $target.val();
+
+            if (value !== '') {
+                if (this.xAxis.el === event.target) {
+                    this.yAxis.$('option[value=' + value + ']')
+                        .prop('disabled', true).val('');
+                    this.series.$('option[value=' + value + ']')
+                        .prop('disabled', true).val('');
+                }
+                else if (this.yAxis.el === event.target) {
+                    this.xAxis.$('option[value=' + value + ']')
+                        .prop('disable', true).val('');
+                    this.series.$('option[value=' + value + ']')
+                        .prop('disable', true).val('');
+                }
+                else {
+                    this.xAxis.$('option[value=' + value + ']')
+                        .prop('disable', true).val('');
+                    this.yAxis.$('option[value=' + value + ']')
+                        .prop('disable', true).val('');
+                }
+            }
+        },
+
+        toggleExpanded: function() {
+            var expanded = this.model.get('expanded');
+
+            if (expanded) {
+                this.contract();
+            }
+            else {
+                this.expand();
+            }
+
+            this.model.save({
+                expanded: !expanded
+            });
+        },
+
+        resize: function() {
+            var chartWidth = this.ui.chart.width();
+
+            if (this.chart) {
+                this.chart.setSize(chartWidth, null, false);
+            }
+        },
+
+        expand: function() {
+            this.$fullsizeToggle.children('i')
+                .removeClass('icon-resize-small')
+                .addClass('icon-resize-full');
+            this.$el.addClass('expanded');
+            this.resize();
+        },
+
+        contract: function() {
+            this.$fullsizeToggle.children('i')
+                .removeClass('icon-resize-full')
+                .addClass('icon-resize-small');
+            this.$el.removeClass('expanded');
+            this.resize();
+        },
+
+        hideToolbar: function() {
+            this.ui.toolbar.fadeOut(this.toolbarAnimationTime);
+        },
+
+        showToolbar: function() {
+            this.ui.toolbar.fadeIn(this.toolbarAnimationTime);
+        },
+
+        toggleEdit: function() {
+            if (this.ui.form.is(':visible')) {
+                this.ui.form.fadeOut(this.formAnimationTime);
+            }
+            else {
+                this.ui.form.fadeIn(this.formAnimationTime);
+            }
+        }
+    });
+
+    return {
+        EditableFieldChart: EditableFieldChart
+    };
+
+});

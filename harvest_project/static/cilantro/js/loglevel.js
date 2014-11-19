@@ -1,2 +1,191 @@
-!function(t){var e="undefined";!function(t,e){"undefined"!=typeof module?module.exports=e():"function"==typeof define&&"object"==typeof define.amd?define(e):this[t]=e()}("log",function(){function i(i){return typeof console===e?h:console[i]===t?console.log!==t?n(console,"log"):h:n(console,i)}function n(e,i){var n=e[i];if(n.bind!==t)return e[i].bind(e);if(Function.prototype.bind===t)return o(n,e);try{return Function.prototype.bind.call(e[i],e)}catch(r){return o(n,e)}}function o(t,e){return function(){Function.prototype.apply.apply(t,[e,arguments])}}function r(t){for(var e=0;e<d.length;e++)u[d[e]]=t(d[e])}function s(){return typeof window!==e&&window.document!==t&&window.document.cookie!==t}function a(){try{return typeof window!==e&&window.localStorage!==t}catch(i){return!1}}function l(t){var e,i=!1;for(var n in u.levels)if(u.levels.hasOwnProperty(n)&&u.levels[n]===t){e=n;break}if(a())try{window.localStorage.loglevel=e}catch(o){i=!0}else i=!0;i&&s()&&(window.document.cookie="loglevel="+e+";")}function c(){var e;if(a()&&(e=window.localStorage.loglevel),e===t&&s()){var i=p.exec(window.document.cookie)||[];e=i[1]}u.levels[e]===t&&(e="WARN"),u.setLevel(u.levels[e])}var u={},h=function(){},d=["trace","debug","info","warn","error"],p=/loglevel=([^;]+)/;return u.levels={TRACE:0,DEBUG:1,INFO:2,WARN:3,ERROR:4,SILENT:5},u.setLevel=function(n){if("number"==typeof n&&n>=0&&n<=u.levels.SILENT){if(l(n),n===u.levels.SILENT)return r(function(){return h}),void 0;if(typeof console===e)return r(function(t){return function(){typeof console!==e&&(u.setLevel(n),u[t].apply(u,arguments))}}),"No console available for logging";r(function(t){return n<=u.levels[t.toUpperCase()]?i(t):h})}else{if("string"!=typeof n||u.levels[n.toUpperCase()]===t)throw"log.setLevel() called with invalid level: "+n;u.setLevel(u.levels[n.toUpperCase()])}},u.enableAll=function(){u.setLevel(u.levels.TRACE)},u.disableAll=function(){u.setLevel(u.levels.SILENT)},c(),u})}();
-//@ sourceMappingURL=loglevel.js.map
+/*! loglevel - v0.6.0 - https://github.com/pimterry/loglevel - (c) 2014 Tim Perry - licensed MIT */
+;(function (undefined) {
+    var undefinedType = "undefined";
+
+    (function (name, definition) {
+        if (typeof module !== 'undefined') {
+            module.exports = definition();
+        } else if (typeof define === 'function' && typeof define.amd === 'object') {
+            define(definition);
+        } else {
+            this[name] = definition();
+        }
+    }('log', function () {
+        var self = {};
+        var noop = function() {};
+
+        function realMethod(methodName) {
+            if (typeof console === undefinedType) {
+                return noop;
+            } else if (console[methodName] === undefined) {
+                if (console.log !== undefined) {
+                    return boundToConsole(console, 'log');
+                } else {
+                    return noop;
+                }
+            } else {
+                return boundToConsole(console, methodName);
+            }
+        }
+
+        function boundToConsole(console, methodName) {
+            var method = console[methodName];
+            if (method.bind === undefined) {
+                if (Function.prototype.bind === undefined) {
+                    return functionBindingWrapper(method, console);
+                } else {
+                    try {
+                        return Function.prototype.bind.call(console[methodName], console);
+                    } catch (e) {
+                        // In IE8 + Modernizr, the bind shim will reject the above, so we fall back to wrapping
+                        return functionBindingWrapper(method, console);
+                    }
+                }
+            } else {
+                return console[methodName].bind(console);
+            }
+        }
+
+        function functionBindingWrapper(f, context) {
+            return function() {
+                Function.prototype.apply.apply(f, [context, arguments]);
+            };
+        }
+
+        var logMethods = [
+            "trace",
+            "debug",
+            "info",
+            "warn",
+            "error"
+        ];
+
+        function replaceLoggingMethods(methodFactory) {
+            for (var ii = 0; ii < logMethods.length; ii++) {
+                self[logMethods[ii]] = methodFactory(logMethods[ii]);
+            }
+        }
+
+        function cookiesAvailable() {
+            return (typeof window !== undefinedType &&
+                    window.document !== undefined &&
+                    window.document.cookie !== undefined);
+        }
+
+        function localStorageAvailable() {
+            try {
+                return (typeof window !== undefinedType &&
+                        window.localStorage !== undefined);
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function persistLevelIfPossible(levelNum) {
+            var localStorageFail = false,
+                levelName;
+
+            for (var key in self.levels) {
+                if (self.levels.hasOwnProperty(key) && self.levels[key] === levelNum) {
+                    levelName = key;
+                    break;
+                }
+            }
+
+            if (localStorageAvailable()) {
+                /*
+                 * Setting localStorage can create a DOM 22 Exception if running in Private mode
+                 * in Safari, so even if it is available we need to catch any errors when trying
+                 * to write to it
+                 */
+                try {
+                    window.localStorage['loglevel'] = levelName;
+                } catch (e) {
+                    localStorageFail = true;
+                }
+            } else {
+                localStorageFail = true;
+            }
+
+            if (localStorageFail && cookiesAvailable()) {
+                window.document.cookie = "loglevel=" + levelName + ";";
+            }
+        }
+
+        var cookieRegex = /loglevel=([^;]+)/;
+
+        function loadPersistedLevel() {
+            var storedLevel;
+
+            if (localStorageAvailable()) {
+                storedLevel = window.localStorage['loglevel'];
+            }
+
+            if (storedLevel === undefined && cookiesAvailable()) {
+                var cookieMatch = cookieRegex.exec(window.document.cookie) || [];
+                storedLevel = cookieMatch[1];
+            }
+
+            if (self.levels[storedLevel] === undefined) {
+                storedLevel = "WARN";
+            }
+
+            self.setLevel(self.levels[storedLevel]);
+        }
+
+        /*
+         *
+         * Public API
+         *
+         */
+
+        self.levels = { "TRACE": 0, "DEBUG": 1, "INFO": 2, "WARN": 3,
+            "ERROR": 4, "SILENT": 5};
+
+        self.setLevel = function (level) {
+            if (typeof level === "number" && level >= 0 && level <= self.levels.SILENT) {
+                persistLevelIfPossible(level);
+
+                if (level === self.levels.SILENT) {
+                    replaceLoggingMethods(function () {
+                        return noop;
+                    });
+                    return;
+                } else if (typeof console === undefinedType) {
+                    replaceLoggingMethods(function (methodName) {
+                        return function () {
+                            if (typeof console !== undefinedType) {
+                                self.setLevel(level);
+                                self[methodName].apply(self, arguments);
+                            }
+                        };
+                    });
+                    return "No console available for logging";
+                } else {
+                    replaceLoggingMethods(function (methodName) {
+                        if (level <= self.levels[methodName.toUpperCase()]) {
+                            return realMethod(methodName);
+                        } else {
+                            return noop;
+                        }
+                    });
+                }
+            } else if (typeof level === "string" && self.levels[level.toUpperCase()] !== undefined) {
+                self.setLevel(self.levels[level.toUpperCase()]);
+            } else {
+                throw "log.setLevel() called with invalid level: " + level;
+            }
+        };
+
+        self.enableAll = function() {
+            self.setLevel(self.levels.TRACE);
+        };
+
+        self.disableAll = function() {
+            self.setLevel(self.levels.SILENT);
+        };
+
+        loadPersistedLevel();
+        return self;
+    }));
+})();
