@@ -22,7 +22,6 @@
     },
 
     paths: {
-        'project': '.',
         'cilantro': 'empty:',
         'jquery': 'empty:',
         'underscore': 'empty:',
