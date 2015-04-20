@@ -11,6 +11,7 @@
 *.egg
 *.egg-info
 pip-log.txt
+build.txt
 
 # Server-related
 *.sock
@@ -29,9 +30,6 @@ whoosh.index
 
 # Ignore local settings file intended for environment-specific settings
 local_settings.py
-
-# Ignore optimized scripts
-harvest_project/static/scripts/javascript/min
 
 # Collected static files via Django's staticfiles app
 _site/static
