@@ -45,8 +45,6 @@ define([
     var Values = Backbone.Collection.extend({
         model: Value,
 
-        comparator: 'label',
-
         options: {
             check: true
         },
@@ -56,7 +54,7 @@ define([
 
             // If values must be checked, bind to the add event
             if (options.check) {
-                this.on('add', _.debounce(this.check, constants.INPUT_DELAY));
+                this.on('add reset', _.debounce(this.check, constants.INPUT_DELAY));
             }
         },
 
@@ -70,12 +68,13 @@ define([
             var models = this.where({valid: null, pending: false});
 
             // Nothing to check
-            if (!models.length) return;
+            if (!models.length || !this.url) return;
 
-            // Mark the models as pending to prevent redundant validation
+            // Mark the models as pending to prevent redundant validation.
             _.each(models, function(model) {
-                model.set('pending', true);
+                model.set('pending', true, {silent: true});
             });
+            this.trigger('change');
 
             var _this = this;
 
@@ -88,7 +87,7 @@ define([
                     // Don't add since the value could have been removed
                     // in the meantime. Don't remove since this may only
                     // represent a subset of values in the collection.
-                    _this.set(resp, {add: false, remove: false});
+                    _this.set(resp, {add: false, remove: false, silent: true});
                 },
 
                 complete: function() {
@@ -96,8 +95,9 @@ define([
                     // has completed regardless if the request succeeded
                     // or failed.
                     _.each(models, function(model) {
-                        model.set('pending', false);
+                        model.set('pending', false, {silent: true});
                     });
+                    _this.trigger('change');
                 }
             });
         }

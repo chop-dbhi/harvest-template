@@ -12,7 +12,10 @@ define([
         template: 'context/actions',
 
         ui: {
-            removeAll: '[data-action=remove]'
+            removeAll: '[data-action=remove]',
+            count: '[data-target=count]',
+            units: '[data-target=units]',
+            loading: '[data-target=loading-message]'
         },
 
         events: {
@@ -20,16 +23,19 @@ define([
         },
 
         modelEvents: {
-            'change:count': 'render'
+            'change:count': 'render',
+            'sync': 'showCount',
+            'request': 'showLoad'
         },
 
         collectionEvents: {
-            'add remove reset change': 'renderRemoveAll'
+            'add remove reset': 'renderRemoveAll'
         },
 
         serializeData: function() {
             var attrs = _.clone(this.model.attributes);
-            attrs.prettyCount = c.utils.prettyNumber(attrs.count);
+            attrs.prettyCount = c.utils.prettyNumber(
+                attrs.count, c.config.get('threshold'));
             return attrs;
         },
 
@@ -39,6 +45,18 @@ define([
 
         onRender: function() {
             this.renderRemoveAll();
+        },
+
+        showLoad: function() {
+            this.ui.count.hide();
+            this.ui.units.hide();
+            this.ui.loading.show();
+        },
+
+        showCount: function() {
+            this.ui.count.show();
+            this.ui.units.show();
+            this.ui.loading.hide();
         },
 
         renderRemoveAll: function() {

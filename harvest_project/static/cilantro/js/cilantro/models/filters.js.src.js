@@ -32,6 +32,23 @@ define([
             return generateId(attrs);
         },
 
+        clear: function(options) {
+            var attrs = _.clone(this.attributes);
+
+            // Do not unset required fields
+            delete attrs.id;
+            delete attrs.field;
+            delete attrs.concept;
+
+            // Void out the value for each key being unset otherwise
+            // the change will not be recorded in Backbone
+            _.each(attrs, function(value, key) {
+                attrs[key] = undefined;
+            });
+
+            this.set(attrs, _.defaults({unset: true}, options));
+        },
+
         // No syncing, i.e. no request, sync, error
         sync: function() {},
 

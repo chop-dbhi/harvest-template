@@ -27,8 +27,9 @@ define([
         views: models.ViewCollection,
         preview: models.Results,
         exporter: models.ExporterCollection,
-        queries: models.QueryCollection,
-        public_queries: models.QueryCollection  // jshint ignore:line
+        queries: models.Queries,
+        public_queries: models.Queries,  // jshint ignore:line
+        stats: models.Stats
     };
 
 
@@ -102,7 +103,7 @@ define([
 
                     // Handle redirect
                     if (error === 'FOUND') {
-                        this.timeout(xhr.getResponseHeader('Location'));
+                        _this.timeout(xhr.getResponseHeader('Location'));
                     }
                 }
             });
@@ -129,9 +130,12 @@ define([
             // Auto-refresh after some time
             setTimeout(function() {
                 if (loc) {
-                    window.location = location;
-                } else {
-                    window.location.reload();
+                    window.location = loc;
+                }
+                else {
+                    // `true` argument forces a fetch from the server rather
+                    // than using local cache.
+                    window.location.reload(true);
                 }
             }, 5000);
         },
@@ -155,6 +159,7 @@ define([
                 if ((Collection = collectionLinkMap[name])) {
                     this.data[name] = new Collection();
                     this.data[name].url = link.href;
+                    this.data[name].fetch({reset: true});
                 }
             }, this);
 
@@ -231,7 +236,6 @@ define([
                 })
                 .done(function(resp, status, xhr) {
                     _this.opened = true;
-                    _this.response = resp;
                     _this._opening.resolveWith(_this, [_this, resp, status, xhr]);
                 })
                 .fail(function(xhr, status, error) {
@@ -244,18 +248,26 @@ define([
 
         // Closing a session will remove the cached data and require it to be
         // opened again.
-        // TODO: unload router views?
         close: function() {
             this.end();
             this.opening = this.opened = false;
 
-            // Reset all collections to deference models
-            _.each(this.data, function(collection) {
-                collection.reset();
+            // Reset all session data to deference models.
+            _.each(this.data, function(item) {
+                // Can't guarantee that all the session data elements are
+                // collections so check for reset before calling it to avoid
+                // calling reset on models.
+                if (item.reset) {
+                    item.reset();
+                }
+                else {
+                    item.clear();
+                }
+
+                delete item.url;
             });
 
             delete this._opening;
-            delete this.response;
             delete this.data;
         },
 
@@ -268,11 +280,6 @@ define([
 
             this.started = true;
 
-            // Fetch collection data
-            _.each(this.data, function(collection) {
-                collection.fetch({reset: true});
-            });
-
             if (routes) this.router.register(routes);
 
             // Start the router history
@@ -282,10 +289,15 @@ define([
             // When the page loses focus, stop pinging, resume when visibility is regained
             this.listenTo(c, {
                 visible: this.startPing,
-                hidden: this.stopPing
+                hidden: this.stopPing,
+                focus: this.startPing,
+                blur: this.stopPing
             });
 
-            if (!c.isSupported(c.getSerranoVersion())) {
+            // Only show the unsupported warning when debug mode is enabled
+            // as this message is confusing to general users and is meant more
+            // for developers.
+            if (c.config.get('debug') && !c.isSupported(c.getSerranoVersion())) {
                 c.notify({
                     header: 'Serrano Version Unsupported',
                     level: 'warning',
@@ -384,6 +396,7 @@ define([
             if (this.active) {
                 var session = this.active;
                 delete this.active;
+                this.remove(session);
                 session.close();
                 this.trigger(events.SESSION_CLOSED, session);
             }
@@ -399,8 +412,9 @@ define([
 
     return _.extend({
         SessionManager: SessionManager,
-        Session: Session
-    }, events);
+        Session: Session,
+        events: events
+    });
 
 
 });
