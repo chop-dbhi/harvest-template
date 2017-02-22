@@ -288,3 +288,5 @@ SITE_ID = 1
 #         'model': '',
 #     }
 # }
+
+RQ_QUEUES = {}

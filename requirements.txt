@@ -1,4 +1,4 @@
-Django>=1.5.5,<1.6
+Django>=1.6,<1.7
 
 # Database Drivers, the Python stdlib has support for SQLite
 # psycopg2
@@ -12,8 +12,9 @@ Django>=1.5.5,<1.6
 # Fabric
 
 # Harvest components
-avocado>=2.3.0,<2.4.0
-serrano>=2.3.0,<2.4.0
+avocado>=2.4.0,<2.5.0
+serrano>=2.4.0,<2.5.0
+modeltree>=1.1.10,<2.0.0
 
 # Harvest extensions
 django-haystack==2.0.0
