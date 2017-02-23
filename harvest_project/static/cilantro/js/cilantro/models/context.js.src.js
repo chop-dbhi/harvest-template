@@ -35,8 +35,7 @@ define([
      * The context model provides an interface for [un]applying filters. Filters
      * are uniquely identified by field, concept, or both.
      */
-    var Context = base.Model.extend({
-
+    var Context = base.StatsSupportedModel.extend({
         options: {
             saveDelay: 300
         },
@@ -92,21 +91,27 @@ define([
                 }, this);
             });
 
-            // Trigger Cilantro event when context is saved
-            this.on('sync', function(model, attrs, options) {
-                options = options || {};
-
-                // Validate the context on sync
-                this.validate();
-
-                if (options.silent !== true) {
-                    c.trigger(c.CONTEXT_SYNCED, this, 'success');
-                }
-            });
+            this.on('sync', this.onSync);
+            
+            if (!c.config.get('distinctCountAutoRefresh')) {
+                this.stats.stopListening(this, 'sync');
+            }
 
             // Define a debounced save method for handling rapid successions
             // of [un]apply events.
             this._save = _.debounce(this.save, this.options.saveDelay);
+        },
+
+        onSync: function(model, resp, options) {
+            // Trigger Cilantro event when context is saved
+            options = options || {};
+
+            // Validate the context on sync
+            this.validate();
+
+            if (options.silent !== true) {
+                c.trigger(c.CONTEXT_SYNCED, this, 'success');
+            }
         },
 
         validate: function() {
@@ -144,12 +149,23 @@ define([
             var attrs = filter.toJSON({id: true});
             // Filters are enabled by default. If a filter is previously disabled
             // and re-applied, it will be enabled.
-            attrs.enabled = true;
             attrs.required = this.isFilterRequired(attrs);
-            delete attrs.language;
 
-            // Add/merge public filter
-            var model = this.filters.add(attrs, _.defaults({merge: true}, options));
+            // Add/update public filter
+            var model = this.filters.get(attrs.id);
+
+            // Clear previous attributes if model exists
+            if (model) {
+                model.clear({silent: true});
+                model.set(attrs);
+            }
+            else {
+                model = this.filters.add(attrs, options);
+            }
+
+            // Silently enable the model, otherwise this will trigger a save
+            // TODO refactor?
+            model.set('enabled', true, {silent: true});
 
             // Trigger the applied event on the internal filter
             var internal = this._filters.get(model);

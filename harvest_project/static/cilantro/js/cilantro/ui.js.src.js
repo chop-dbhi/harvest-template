@@ -4,7 +4,7 @@
 define([
     'underscore',
     './ui/core',
-    './ui/accordian',
+    './ui/accordion',
     './ui/base',
     './ui/button',
     './ui/charts',
@@ -12,10 +12,12 @@ define([
     './ui/context',
     './ui/controls',
     './ui/exporter',
+    './ui/api',
     './ui/field',
     './ui/notify',
     './ui/paginator',
     './ui/query',
+    './ui/stats',
     './ui/tables',
     './ui/workflows'
 ], function(_) {

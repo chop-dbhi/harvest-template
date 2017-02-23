@@ -48,8 +48,10 @@ define([
         serializeData: function() {
             var data = this.model.toJSON();
 
-            if (!data.description && this.model.fields.length === 1) {
-                data.description = this.model.fields.at(0).get('description');
+            if (this.model.fields.length === 1) {
+                var field = this.model.fields.at(0);
+                if (!data.description) data.description = field.get('description');
+                if (!data.unit) data.unit = field.get('unit');
             }
 
             return data;
@@ -97,9 +99,11 @@ define([
             // Overflow hidden is enforced, toggle normally
             if (this.ui.description.hasClass('ellipsis')) {
                 if (!this.descriptionOverflows()) return;
+                this.ui.descriptionToggle.text('read less');
                 this.ui.description.removeClass('ellipsis');
             }
             else {
+                this.ui.descriptionToggle.text('read more');
                 this.ui.description.addClass('ellipsis');
             }
         }

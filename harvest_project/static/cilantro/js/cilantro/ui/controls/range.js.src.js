@@ -7,7 +7,7 @@ define([
     '../../constants'
 ], function(_, base, button, constants) {
 
-    // A generic control for entering an inclusive or exclusive range
+    // A generic control for entering an inclusive or exclusive range.
     var RangeControl = base.Control.extend({
         template: 'controls/range/layout',
 
@@ -105,13 +105,13 @@ define([
                 operator = this.operatorSelect.getSelection(),
                 reverse = operator !== 'range';
 
-            if (lower && upper) {
+            if (lower !== '' && upper !== '') {
                 operator = operator;
             }
-            else if (lower) {
+            else if (lower !== '') {
                 operator = reverse ? 'lte' : 'gte';
             }
-            else if (upper) {
+            else if (upper !== '') {
                 operator = reverse ? 'gte' : 'lte';
             }
             else {
@@ -139,6 +139,10 @@ define([
             return this.ui.upperBound.val();
         },
 
+        exists: function(value) {
+            return _.exists(value) && value !== '';
+        },
+
         // Use the filled state of the upper/lower bound inputs to create the
         // value range or explicit value for this control. If both the upper
         // and lower bounds are left blank, null will be returned to invalidate
@@ -148,17 +152,24 @@ define([
                 lower = this.getLowerBoundValue(),
                 upper = this.getUpperBoundValue();
 
-            if (!_.isUndefined(lower) && !_.isUndefined(upper)) {
+            if (this.exists(lower) && this.exists(upper)) {
                 value = [lower, upper];
             }
-            else if (!_.isUndefined(lower)) {
+            else if (this.exists(lower)) {
                 value = lower;
             }
-            else if (!_.isUndefined(upper)) {
+            else if (this.exists(upper)) {
                 value = upper;
             }
 
             return value;
+        },
+
+        isFocused: function(element) {
+            // We need to compare the element against the activeElement on the
+            // document because the :focus psuedoselector is buggy in some
+            // browsers.
+            return document.activeElement === element;
         },
 
         setOperator: function(operator) {
@@ -182,7 +193,12 @@ define([
         },
 
         setLowerBoundValue: function(value) {
-            this.ui.lowerBound.val(value);
+            // Since ui.upperBound is techinically just the result of a selector
+            // it is really an array so we use the first element to check for
+            // the focused state.
+            if (!this.isFocused(this.ui.lowerBound[0])) {
+                this.ui.lowerBound.val(value);
+            }
         },
 
         // This method updates the upper bound text box placeholder with the
@@ -196,15 +212,24 @@ define([
         },
 
         setUpperBoundValue: function(value) {
-            this.ui.upperBound.val(value);
+            // Since ui.upperBound is techinically just the result of a selector
+            // it is really an array so we use the first element to check for
+            // the focused state.
+            if (!this.isFocused(this.ui.upperBound[0])) {
+                this.ui.upperBound.val(value);
+            }
         },
 
         // Override set method due to the dependency of the operator
-        // when setting the value
+        // when setting the value.
         set: function(attrs) {
+            // If this control is in the middle of a change, don't bother
+            // trying to set anything here.
+            if (this._changing) return;
+
             this.setOperator(attrs.operator);
 
-            // Reset values prior to setting
+            // Reset values prior to setting.
             this.setUpperBoundValue();
             this.setLowerBoundValue();
 
@@ -225,12 +250,12 @@ define([
         },
 
         validate: function(attrs) {
-            // One of the bounds must be defined
-            if (_.isUndefined(attrs.value)) {
+            // One of the bounds must be defined.
+            if (_.isUndefined(attrs.value) || _.isNull(attrs.value)) {
                 return 'A lower or upper value must be defined';
             }
 
-            // The first value should not be greater than the second
+            // The first value should not be greater than the second.
             if (_.isArray(attrs.value) && attrs.value[0] > attrs.value[1]) {
                 return 'The lower bound cannot be greater than the upper';
             }

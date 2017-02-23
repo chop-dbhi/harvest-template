@@ -23,22 +23,59 @@ define([
             label: '.count-label'
         },
 
-        modelEvents: {
-            'change:objectcount': 'renderCount'
+        initialize: function() {
+            this.model.stats.on('sync', this.updateCount, this);
+            this.on('render', this.updateCount, this);
         },
 
-        onRender: function() {
-            if (this.model.objectCount !== undefined) {
-                this.renderCount(this.model, this.model.objectCount);
-            }
-            else {
-                this.renderCount(this.model, '');
-            }
-        },
-
-        renderCount: function(model, count) {
-            numbers.renderCount(this.ui.count, count);
+        updateCount: function() {
+            var count = this.model.stats.get('count');
+            this.collection.setResultCount(count);
+            numbers.renderCount(
+                this.ui.count,
+                count,
+                'all'
+            );
             this.ui.label.text('records');
+        }
+    });
+
+
+    var ResultsPaginator = paginator.Paginator.extend({
+        renderPageCount: function(model, value) {
+            var text = value;
+
+            // If the page count is undefined then we don't know how many
+            // pages there are so we can just claim to be showing all pages
+            // for now until we get an actual value.
+            if (value === undefined) text = 'all';
+
+            // If there are no pages, just lie and claim there is a single page
+            // since the current page will be 1 in this case and showing page
+            // 1 / 0 would be a little confusing to the user.
+            if (value === 0) text = 1;
+
+            this.ui.pageCount.text(text);
+        },
+
+        renderCurrentPage: function(model, value, options) {
+            this.ui.currentPage.text(value);
+            this.ui.first.prop('disabled', !!options.first);
+            this.ui.prev.prop('disabled', !!options.first);
+            this.ui.next.prop('disabled', !!options.next);
+            this.ui.last.prop('disabled', !!options.last);
+
+            // If we have disabled the buttons then we need to force hide the
+            // tooltip to prevent it from being permanently visible.
+            if (!!options.first) {
+                this.ui.first.tooltip('hide');
+                this.ui.prev.tooltip('hide');
+            }
+
+            if (!!options.last) {
+                this.ui.next.tooltip('hide');
+                this.ui.last.tooltip('hide');
+            }
         }
     });
 
@@ -64,14 +101,18 @@ define([
             navbar: '.results-workflow-navbar',
             resultsContainer: '.results-container',
             navbarButtons: '.results-workflow-navbar button',
-            loadingOverlay: '.loading-overlay'
+            loadingOverlay: '[data-target=results-loading-message]',
+            canceledQueryMessage: '[data-target=canceled-query-message]'
         },
 
         events: {
             'click [data-toggle=columns-dialog]': 'showColumnsDialog',
             'click [data-toggle=exporter-dialog]': 'showExporterDialog',
             'click [data-toggle=query-dialog]': 'showQueryDialog',
-            'click [data-toggle=context-panel]': 'toggleContextPanel'
+            'click [data-toggle=api-script-dialog]': 'showApiScriptDialog',
+            'click [data-toggle=context-panel]': 'toggleContextPanel',
+            'click [data-action=cancel-query]': 'handleCancelQuery',
+            'click [data-action=retry-query]': 'handleRetryQuery'
         },
 
         regions: {
@@ -85,6 +126,10 @@ define([
             _.bindAll(this, 'onPageScroll');
 
             this.data = {};
+
+            if (!(this.data.context = this.options.context)) {
+                throw new Error('context model required');
+            }
 
             if (!(this.data.view = this.options.view)) {
                 throw new Error('view model required');
@@ -110,12 +155,41 @@ define([
             this.data.results.trigger('workspace:unload');
         },
 
+        handleCancelQuery: function(event) {
+            event.preventDefault();
+            this.data.results.cancel();
+            this.showCanceledQueryMessage();
+        },
+
+        handleRetryQuery: function(event) {
+            event.preventDefault();
+            // Hideous..
+            this.data.results.markAsDirty();
+            this.data.results.fetch();
+        },
+
+        showCanceledQueryMessage: function() {
+            this.hideLoadingOverlay();
+            this.ui.canceledQueryMessage.show();
+            this.table.$el.hide();
+        },
+
+        hideCanceledQueryMessage: function() {
+            this.ui.canceledQueryMessage.hide();
+            this.table.$el.show();
+        },
+
         showLoadingOverlay: function() {
-            if (this.isClosed !== true) this.ui.loadingOverlay.show();
+            if (this.isClosed !== true) {
+                this.hideCanceledQueryMessage();
+                this.ui.loadingOverlay.show();
+            }
         },
 
         hideLoadingOverlay: function() {
-            if (this.isClosed !== true) this.ui.loadingOverlay.hide();
+            if (this.isClosed !== true) {
+                this.ui.loadingOverlay.hide();
+            }
         },
 
         toggleContextPanel: function() {
@@ -203,18 +277,13 @@ define([
         onRender: function() {
             $(document).on('scroll', this.onPageScroll);
 
-            // Remove unsupported features from view/
-            if (!c.isSupported('2.1.0')) {
-                this.ui.saveQueryToggle.remove();
-                this.ui.saveQuery.remove();
-            }
-
-            this.paginator.show(new paginator.Paginator({
+            this.paginator.show(new ResultsPaginator({
                 model: this.data.results
             }));
 
             this.count.show(new ResultCount({
-                model: this.data.results
+                model: this.data.context,
+                collection: this.data.results
             }));
 
             this.table.show(new tables.Table({
@@ -225,6 +294,28 @@ define([
             this.ui.navbarButtons.tooltip({
                 animation: false,
                 placement: 'bottom'
+            });
+
+            /*
+            * If the user's view is empty, show them a notification explaining why no data
+            * is being displayed. The notification is not shown when the
+            * 'session.defaults.data.preview' config option is present. When that option
+            * is being used, the view is overridden when making requests to the preview
+            * endpoint so the data(order aside) shown in the results table will not be
+            * affected by the columns(or lack thereof) the user has chosen.
+            */
+            this.listenTo(this.data.view.facets, 'reset', function() {
+                if (this.data.view.facets.length === 0 &&
+                        !c.config.get('session.defaults.data.preview')) {
+                    c.notify({
+                        header: 'No Columns Selected: ',
+                        level: 'warning',
+                        timeout: false,
+                        message: 'No data can be displayed. Click the "Change ' +
+                                 'Columns" button on the toolbar to select ' +
+                                 'columns to display.'
+                    });
+                }
             });
         },
 
@@ -244,6 +335,10 @@ define([
             // Opens the query modal without passing a model which assumes a
             // new one will be created based on the current session.
             c.dialogs.query.open();
+        },
+
+        showApiScriptDialog: function() {
+          c.dialogs.apiScript.open();
         }
     });
 

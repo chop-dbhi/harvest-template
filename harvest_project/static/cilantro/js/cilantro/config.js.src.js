@@ -37,19 +37,71 @@ define([
             }
         },
 
+        csrf: {
+            header: 'X-CSRFToken',
+            // Included to support a legacy pattern.
+            token: window.csrfToken || window.csrf_token  // jshint ignore:line
+        },
+
         // Convenience option: URL of the default session
         url: null,
 
         // Convenience option: Credentials for the default session
         credentials: null,
 
+        /*
+         * Threshold for showing counts of results as rounded and/or
+         * prefixed numbers. Set this threshold to be a number and if the
+         * displayed counts are less than the threshold, there will be no
+         * rounding and the count will be displayed as is(precise).
+         */
+        threshold: null,
+
+        /*
+         * A list of values used to determine which models are shown in the
+         * stats table on the Workspace page. When this value is null, there is
+         * no filtering done and all models will be listed in the table. When
+         * this value is the empty list([]), then the control itself will not
+         * be shown. Finally, when this list contains values, only the stat
+         * values with values in this list will be shown.
+         *
+         * NOTE: Values in this list must be of the format app_name.model_name,
+         * so, for example, if I wanted to include just a couple models I might
+         * set this list to:
+         *
+         *      statsModelsList = [
+         *          'diagnoses.diagnosis',
+         *          'drugs.drug'
+         *      ];
+         *
+         * And all models except Diagnosis from the diagnoses app and Drug from
+         * the drugs app will be ignored.
+         */
+        statsModelsList: null,
+
+        /*
+         * Threshold for the max number of values that will be displayed in
+         * a filter on the context panel before they are hidden with ellipses.
+         */
+        maxFilterDisplayValues: 4,
+
+        /*
+         * Setting this as true will style the filter display, highlighting
+         * concept names, operators and values to make filters more readable.
+         */
+        styleFilters: false,
+
+        /*
+        * Automatically refresh count statistics for context when filters
+        * change.
+        */
+        distinctCountAutoRefresh: true,
 
         /*
          * Timeouts
          *
          * Timeouts for various components in Cilantro.
          */
-
         timeouts: {
             control: 10000
         },
@@ -70,14 +122,9 @@ define([
          * Keys represent the names of the controls and the value is either
          * a control class or a module name (that will be fetched on demand).
          *
-         * Built-in controls:
-         * - infograph: cilantro/ui/controls/infograph
-         * - number: cilantro/ui/controls/number
-         * - date: cilantro/ui/controls/date
-         * - search: cilantro/ui/controls/search
-         * - singleSelectionList: cilantro/ui/controls/select
-         * - multiSelectionList: cilantro/ui/controls/select
-         * - nullSelector: cilantro/ui/controls/null
+         * The default controls can be found near the top of:
+         *
+         *      cilantro/js/ui/controls/registry.js
          */
 
         controls: {},
@@ -124,8 +171,8 @@ define([
          * Precedence hierarchy:
          *
          * - defaults: default options for the component
-         * - types: specific to concept type, overrides defaults
-         * - instances: specific to a concept instance, overrides types
+         * - types: specific to field type, overrides defaults
+         * - instances: specific to a field instance, overrides types
          *
          */
 
@@ -181,8 +228,11 @@ define([
     // Takes N number of option objects with increasing precedence and deep
     // merges them with the default options.
     var Config = function() {
-        var options = [].slice.call(arguments);
+        this.reset.apply(this, arguments);
+    };
 
+    Config.prototype.reset = function() {
+        var options = [].slice.call(arguments);
         this.options = $.extend.apply(null, [true, {}, defaultOptions].concat(options));
     };
 
@@ -192,6 +242,10 @@ define([
 
     Config.prototype.set = function(key, value) {
         utils.setDotProp(this.options, key, value);
+    };
+
+    Config.prototype.unset = function(key) {
+        utils.setDotProp(this.options, key, undefined);
     };
 
 

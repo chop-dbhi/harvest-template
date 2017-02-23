@@ -15,11 +15,12 @@ define([
         if (!filter) return;
 
         filter.listenTo(view, 'change', function(view, attrs) {
+            filter.clear();
             filter.set(attrs);
         });
 
         view.listenTo(filter, 'change', function(filter) {
-            if (!view._changing) view.set(filter.toJSON());
+            view.set(filter.toJSON());
         });
     };
 
